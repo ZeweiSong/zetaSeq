@@ -1,4 +1,8 @@
-![zetaSeq](zetaseq.png)
+<img
+  src="zetaseq.png"
+  alt="zetaSeq"
+  title="zetaSeq"
+  style="display: inline-block; margin: 0 auto; max-width: 300px">
 
 `zetaSeq` is a Python library and program collections I wrote for myself when dealing with amplion data and later shotgun data of microbial communities. It is not a full pipeline, but contains various tools I found useful. Most of them were created because I cannot find the same function on the Internet. The order of sections however is organized in a workflow way of a metagenomic analysis.
 
