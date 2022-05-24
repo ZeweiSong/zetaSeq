@@ -1,28 +1,28 @@
-![zetaSeq](https://github.com/ZeweiSong/zetaSeq/blob/main/zetaseq.png)
+![zetaSeq](https://gitlab.genomics.cn/meer/zetaSeq/blob/main/zetaseq.png)
 
 `zetaSeq` is a Python library and program collections I wrote for myself when dealing with amplion data and later shotgun data of microbial communities. It is not a full pipeline, but contains various tools I found useful. Most of them were created because I cannot find the same function on the Internet. The order of sections however is organized in a workflow way of a metagenomic analysis.
 
-[1. Installation](https://github.com/ZeweiSong/zetaSeq#installation)
+[1. Installation](https://gitlab.genomics.cn/meer/zetaSeq#installation)
 
-[2. Basic sequence input and output](https://github.com/ZeweiSong/zetaSeq#basic-sequence-input-and-output)
+[2. Basic sequence input and output](https://gitlab.genomics.cn/meer/zetaSeq#basic-sequence-input-and-output)
 
-[3. Qulity control](https://github.com/ZeweiSong/zetaSeq#qulity-control)
+[3. Qulity control](https://gitlab.genomics.cn/meer/zetaSeq#qulity-control)
 
-[4. Sample preprocess](https://github.com/ZeweiSong/zetaSeq#sample-preprocess)
+[4. Sample preprocess](https://gitlab.genomics.cn/meer/zetaSeq#sample-preprocess)
 
-[5. Alignment](https://github.com/ZeweiSong/zetaSeq#alignment)
+[5. Alignment](https://gitlab.genomics.cn/meer/zetaSeq#alignment)
 
-[6. A Bayesian profiler](https://github.com/ZeweiSong/zetaSeq#a-bayesian-profiler)
+[6. A Bayesian profiler](https://gitlab.genomics.cn/meer/zetaSeq#a-bayesian-profiler)
 
-[7. Biom format](https://github.com/ZeweiSong/zetaSeq#biom-format)
+[7. Biom format](https://gitlab.genomics.cn/meer/zetaSeq#biom-format)
 
-[8. Contigs](https://github.com/ZeweiSong/zetaSeq#contigs)
+[8. Contigs](https://gitlab.genomics.cn/meer/zetaSeq#contigs)
 
-[9. Ribosomal RNA](https://github.com/ZeweiSong/zetaSeq#ribosomal-rna)
+[9. Ribosomal RNA](https://gitlab.genomics.cn/meer/zetaSeq#ribosomal-rna)
 
-[10. NCBI Taxdump](https://github.com/ZeweiSong/zetaSeq#ncbi-taxdump)
+[10. NCBI Taxdump](https://gitlab.genomics.cn/meer/zetaSeq#ncbi-taxdump)
 
-[11. DereCo](https://github.com/ZeweiSong/zetaSeq#dereco)
+[11. DereCo](https://gitlab.genomics.cn/meer/zetaSeq#dereco)
 
 # Installation
 
@@ -32,7 +32,7 @@ The only thing you need is a Python 3 environment. Anaconda is a good choice (ht
 
 Clone or download zetaSeq repository to your path.
 
-    git clone https://github.com/ZeweiSong/zetaSeq
+    git clone https://gitlab.genomics.cn/meer/zetaSeq
     cd zetaSeq
     chmod +x biom_concat contister contister_gather keep_pair_aln lnster rrnaster solve_profile truncaster
     export PATH="your/path/to/zetaSeq:$PATH"
