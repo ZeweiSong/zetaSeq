@@ -8,7 +8,8 @@ Created on Thu May 19 17:33:42 2022
 
 Dereplicate a group of contigs
 
-dereco
+dereco prep -i /path/to/contigs.fa.gz -o /path/to/out/folder/ -c 1000000
+dereco cacl -i /path/to/out/folder -t 4
 
 He who loves to comment his code is unlikely to have bad luck.
 @author: Song, Zewei
@@ -23,7 +24,7 @@ from zetaSeq import io as seqIO
 
 def print_help():
     print('')
-    print('Dereco: dereplicate a group of contigs')
+    print('DereCo: dereplicate a group of contigs')
     print('--------------------')
     print('Choose an option:')
     print('prep\tPrepare a working folder')
@@ -108,7 +109,7 @@ def remove_seqs(input_seqs, removal_list):
             result.append(item)
     return result
 
-def calc(args_input, args_output, args_threads):
+def calc(args_input, args_threads):
     if not args_input.endswith('/'): args_input += '/'
     for item in os.listdir(args_input):
         if item.endswith('.large.fa.gz'):
@@ -227,13 +228,12 @@ elif option == 'calc':
     print('Calculate similarity and dereplicate')
     parser = argparse.ArgumentParser(prog='dereco calc')
     parser.add_argument('-i', '--input', help='Path to the prep output folder.')
-    parser.add_argument('-o', '--output', help='Path to the output folder')
     parser.add_argument('-t', '--threads', type=int, help='Numer of threads')
     if len(sys.argv[:]) == 2:
         parser.print_help()
     else:
         args = parser.parse_args(sys.argv[2:])
-        calc(args.input, args.output, args.threads)
+        calc(args.input, args.threads)
 elif option == 'stat':
     print('Generate a report')
     parser = argparse.ArgumentParser(prog='dereco stat')
