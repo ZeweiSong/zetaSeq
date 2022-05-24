@@ -1,0 +1,234 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Apr 18 09:34:49 2022
+
+Rrnaster: Parse cmsearch --tblout output ---> muscle msa ---> concensus sequences
+
+@author: songz
+"""
+
+#%%
+import copy
+import re
+import argparse
+import os
+import sys
+from zetaSeq import io as seqIO
+import subprocess
+import hashlib
+
+#-----------
+
+# Read tblout file generated from cmsearch --tblout
+def read_tblout(tblout_file):
+    content = []
+    skipn = 2
+    with open(tblout_file, 'r') as f:
+        for i in range(skipn):
+            f.readline()
+        for line in f:
+            line = line.strip('\n')
+            line = re.split(r" {1,}", line)
+            if line[0] != '#': # The end of last line
+                evalue = float(line[15])
+                score = float(line[14])
+                target = line[0]
+                start = int(line[7])
+                end = int(line[8])
+                strand = line[9]
+                query = line[2]
+                content.append({'target':target, 'query':query, \
+                                'evalue':evalue, 'score':score, \
+                                'start':start, 'end':end, 'strand':strand})
+    return content
+
+# Cluster CM hits using greedy algorithm
+def greed_cluster(tbl_content):
+    tbl_content.sort(key = lambda i:i['evalue']) # Sort hits with E-value from small to large
+    tbl_content.sort(key = lambda i:i['score'], reverse=True) # Sort again with Score from large to small
+    seeds = []
+    sides = []
+    s = tbl_content[0]
+    while len(tbl_content) > 1:
+        s = tbl_content[0] # The first hit in the reamining tbl_content list become the current seed
+        seeds.append(s)
+        temp = []
+        for index, item in enumerate(tbl_content[1:]): # iterate from the remaining second hit
+            if s['strand'] == item['strand'] == '+':
+                if not (s['start'] >= item['end'] or s['end'] <= item['start']):
+                    sides.append(item)
+                else:
+                    temp.append(item)
+            elif s['strand'] == item['strand'] == '-':
+                if not (s['start'] <= item['end'] or s['end'] >= item['start']):
+                    sides.append(item)
+                else:
+                    temp.append(item)
+            elif s['strand'] != item['strand']:
+                temp.append(item)
+            tbl_content = copy.copy(temp)
+    if len(tbl_content) == 1:
+        seeds.append(tbl_content[0])
+    return seeds
+
+# Reverse compliment a sequence
+def revcomp(seq):
+    return seq.translate(str.maketrans('ACGTacgtRYMKrymkVBHDvbhdN', 'TGCAtgcaYRKMyrkmBVDHbvdhN'))[::-1]
+
+# Get region sequence from a genome using a seed
+def get_region(sd, gnm):
+    if sd['strand'] == '+':
+        seq = gnm[sd['target']][sd['start']-1:sd['end']]
+        return seq
+    elif sd['strand'] == '-':
+        seq = gnm[sd['target']][sd['end']-1:sd['start']]
+        seq = revcomp(seq)
+        return seq
+    else:
+        return None
+
+#-------------
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-g', '--genome', help='Path to target genome.')
+parser.add_argument('-d', '--database', help='Path to RFAM covariance models.')
+parser.add_argument('-r', '--region', choices=['all','ssu','lsu'], help='Choose the targeted region: all, ssu, lsu, or 558s.')
+parser.add_argument('-o', '--output', default='rfam_out.tsv', help='Path to seed list.')
+parser.add_argument('-c', '--concensus', default='concensus.fa', help='Path to the concensus sequence')
+parser.add_argument('-t', '--threads', type=int, default=1, help='Number of threads to use.')
+args = parser.parse_args()
+genome_file = args.genome
+rfam_path = args.database
+region = args.region
+output_file = args.output
+threads = args.threads
+
+rfam = {'ssu':('RF00177', 'RF01959', 'RF01960', 'RF02542'), \
+        'lsu':('RF02541', 'RF02540', 'RF02543'), \
+        '558s':('RF00001', 'RF00002')}
+if not rfam_path.endswith('/'):
+    rfam_path += '/'
+
+# Search in given genomes the CM models
+cms = []
+if region == 'all':
+    print('Mode: all')
+    print('Search all ribosomal RNA CMs')
+    for key, value in rfam.items():
+        cms += list(value)
+elif region == 'ssu':
+    print('Mode: {0}'.format(region.upper()))
+    print('Search {0} ribosomal RNA CMs'.format(region.upper()))
+    cms = rfam[region]
+elif region == 'lsu':
+    print('Mode: {0}'.format(region.upper()))
+    print('Search LSU and 5/5.8S ribosomal RNA CMs')
+    cms = tuple(list(rfam['lsu']) + list(rfam['558s']))
+print('CMs to search: {0}'.format(cms))
+print('Genome: {0}'.format(genome_file))
+allout = []
+
+for index, model in enumerate(cms):
+    hash_object = hashlib.md5(genome_file.encode()) # generate a MD5 hash using the genome file name
+    tmp_out = hash_object.hexdigest() # so the tmp file will not conflict
+    # tmp_out = 'tmp_' + str(index) + '.tsv'
+    cmd = ['cmsearch']
+    cmd.append('--tblout ' + tmp_out)
+    cmd.append('--cpu ' + str(threads))
+    cmd.append('-E 0.001')
+    cmd.append(rfam_path + model + '.cm')
+    cmd.append(genome_file)
+    cmd.append('> /dev/null')
+    print('{0}: {1}'.format(model, ' '.join(cmd)))
+    os.system(' '.join(cmd))
+    allout += read_tblout(tmp_out)
+    os.remove(tmp_out)
+
+# Cluster cmsearch hits
+print('Searching finished, {0} hits total'.format(len(allout)))
+if len(allout) == 0:
+    cmd = ['touch', output_file]
+    print(' '.join(cmd))
+    os.system(' '.join(cmd))
+    cmd = ['touch', args.concensus]
+    print(' ' .join(cmd))
+    os.system(' '.join(cmd))
+    sys.exit()
+else:
+    print('Processing with greeding clustring ...')
+seeds = greed_cluster(allout)
+seeds.sort(key = lambda i:i['start'])
+seeds.sort(key = lambda i:i['strand'])
+print('Clustered into {0} seeds:'.format(len(seeds)))
+print('Target\tQuery\tE-value\tScore\tStart\tEnd\tStrand')
+for item in seeds:    
+    print('{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}'.format(item['target'], \
+                                                         item['query'], \
+                                                         item['evalue'], \
+                                                         item['score'], \
+                                                         item['start'], \
+                                                         item['end'], \
+                                                         item['strand']))
+
+with open(output_file, 'w') as f:
+    for item in seeds:
+        f.write('{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\n'.format(item['target'], \
+                                                             item['query'], \
+                                                             item['evalue'], \
+                                                             item['score'], \
+                                                             item['start'], \
+                                                             item['end'], \
+                                                             item['strand']))
+
+# Get the sequnences of seeds
+query = set([x['query'] for x in seeds])
+sequences = {x:[] for x in query}
+genome = {}
+for item in seqIO.sequence_multiline_fasta(genome_file):
+    label = item[0].split(' ')[0]
+    genome[label] = item[1]
+for index, item in enumerate(seeds):
+    seq = get_region(item, genome)
+    accid = os.path.basename(genome_file).split('.')[0]
+    label = accid + ';' + item['target'] + ';' + item['query'] + ';' + \
+            str(item['start']) + ';' + str(item['end']) + ';' + item['strand']
+    sequences[item['query']].append((label, seq))
+
+# MSA and concensus for each query
+print('')
+content = []
+for key, value in sequences.items():
+    print('')
+    print('Multiple alignment for {0}:'.format(key))
+    hash_object = hashlib.md5(genome_file.encode())
+    tmp_seq = hash_object.hexdigest() + '.fna'
+    c = seqIO.write_seqs(value, tmp_seq, fastx='a', gz=False)
+    tmp_msa = hash_object.hexdigest() + '.msa'
+    cmd = ['muscle', '-align', tmp_seq, '-output ', tmp_msa]
+    print(' '.join(cmd))
+    os.system(' '.join(cmd))
+    response = subprocess.run(cmd, shell=True, stdout=subprocess.DEVNULL)
+    
+    msa_file = tmp_msa
+    seq = [i for i in seqIO.sequence_multiline_fasta(msa_file)]
+    length = len(seq[0][1])
+    concensus = ''
+    for i in range(length):
+        c = [n[1][i] for n in seq] # get all ith nucleotide
+        count = {'A':0, 'C':0, 'G':0, 'T':0, \
+                 'R':0, 'Y':0, 'M':0, 'K':0, \
+                 'V':0, 'B':0, 'H':0, 'D':0, \
+                 'N':0, '-':0}
+        for nucl in c:
+            count[nucl] = count.get(nucl, 0) + 1
+        count_list = [(k, j) for k, j in count.items()]
+        count_list.sort(key = lambda x:x[1], reverse=True)
+        concensus += count_list[0][0] # Pick the most abundant nucleotide as the concensus base
+    os.remove(tmp_seq)
+    os.remove(tmp_msa)
+    content.append((seq[0][0], concensus))
+
+final = seqIO.write_seqs(content, args.concensus, fastx='a', gz=False)
+print('')
+print('Concensus sequences wrote to: {0}'.format(args.concensus))

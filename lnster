@@ -1,0 +1,45 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Dec  6 14:47:12 2021
+
+@author: songz
+"""
+import argparse
+import os
+
+parser = argparse.ArgumentParser()
+parser.add_argument('list_path', help='List of the sequence files.')
+args = parser.parse_args()
+
+data_list = args.list_path
+target_path = 'data/samples/'
+content = []
+with open(data_list, 'r') as f:
+    for line in f:
+        line = line.strip('\n').split('\t')
+        content.append(line)
+
+count = 0
+for item in content:
+    print('Sample name: {0}'.format(line[8]))
+    files = os.listdir(line[5])
+    fqs = {1:'', 2:''}
+    for fl in files:
+        if fl.endswith('_1.fq.gz'):
+            fqs[1] = fl
+        elif fl.endswith('_2.fq.gz'):
+            fqs[2] = fl
+        else: pass
+    if fqs[1] != '' and fqs[2] != '':
+        print('Found fastq files: {0} {1}'.format(fqs[1], fqs[2]))
+        cmd_1 = 'ln -s ' + line[5] + '/' + fqs[1] + ' ' + target_path + line[8] + '.1.fq.gz'
+        cmd_2 = 'ln -s ' + line[5] + '/' + fqs[2] + ' ' + target_path + line[8] + '.2.fq.gz'
+        print(cmd_1)        
+        # os.system(cmd_1)
+        print(cmd_2)
+        # os.system(cmd_2)
+        count += 1
+        print('Processed samples: {0}'.format(count))       
+    else:
+        print('Did not found the right file under current path')

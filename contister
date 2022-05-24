@@ -1,0 +1,87 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Feb  3 14:16:40 2022
+
+Contigs statistics parser:
+
+contister.py -i [FASTA] -o [JSON]
+
+@author: songz
+"""
+
+from zetaSeq import io as seqIO
+import argparse
+# import os
+import json
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-i', '--input', help='Path to the input FASTA file.')
+parser.add_argument('-o', '--output', default='assembly_stats.json', help='Path to the output JSON file.')
+parser.add_argument('-m', '--min_length', type=int, default=1, help='Minimum length included, Default = 1 bp')
+parser.add_argument('-s', 'suppress', action='store_true', help='Supress the std output.')
+args = parser.parse_args()
+input_file = args.input
+output_file = args.output
+min_length = args.min_length
+
+fasta = [i for i in seqIO.sequence_multiline_fasta(input_file) if len(i[1]) >= min_length]
+fasta_len = sorted([len(i[1]) for i in fasta], reverse=True)
+report = {'Total number of base pairs': sum(fasta_len), \
+          'Total number of contigs': len(fasta), \
+          'N10': [], \
+          'N20': [], \
+          'N30': [], \
+          'N40': [], \
+          'N50': [], \
+          'L10': [], \
+          'L20': [], \
+          'L30': [], \
+          'L40': [], \
+          'L50': [], \
+          'GC content': 0, \
+          'Median contig size': fasta_len[int(len(fasta_len)/2)], \
+          'Mean contig size': sum(fasta_len) / len(fasta_len), \
+          'Longest contig': fasta_len[0], \
+          'Shortest contig': fasta_len[-1]}
+
+# GC content
+gc_count = sum([i[1].upper().count('G') + i[1].upper().count('C') for i in fasta])
+gc_content = float(gc_count / sum(fasta_len) * 100)
+report['GC content'] = gc_content
+
+# N50 and L50    
+N50_threshold = report['Total number of base pairs'] / (100/50)
+sum_length = 0
+checker = {10:True, 20:True, 30:True, 40:True}
+for index, seq in enumerate(fasta_len):
+    sum_length += seq
+    
+    # N10 and L10
+    for item in (10,20,30,40):
+        if checker[item]:
+            k1 = 'N' + str(item)
+            k2 = 'L' + str(item)
+            if sum_length >= report['Total number of base pairs'] / (100/item):
+                report[k1] = seq
+                report[k2] = index + 1
+                checker[item] = False
+    
+    # N50 and L50 and exit
+    if sum_length >= N50_threshold:
+        report['N50'].append(seq)
+        report['L50'].append(index + 1)
+        break
+
+# Print to screen
+if args.supress:
+    pass
+else:
+    print('Assembly stats of {0}'.format(input_file))
+    print('Minimum length: {0}'.format(min_length))
+    for key, value in report.items():
+        print('{0}: \t{1}'.format(key, value))
+
+# To JSON
+with open(output_file, 'w') as f:
+    c = json.dump(report, f)

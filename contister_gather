@@ -1,0 +1,34 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Mar  9 19:39:26 2022
+
+Concat (gather) all contiser generated json report into a plain text file.
+
+@author: songz
+"""
+
+import json
+import argparse
+import sys
+import os
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-i', '--input', type=argparse.FileType('r'), nargs='+', default=sys.stdin, help='Use: $(ls -d path/*.json) to specify json report.')
+parser.add_argument('-o', '--output', default='contigs_reports.tsv', help='Output file name, default: contigs_reports.tsv.')
+args = parser.parse_args()
+output_path = args.output
+
+report = {}
+for fp in args.input:
+    filename = os.path.basename(fp.name) # Get the basename of current file
+    sample_name = filename.split('.')[0]
+    report[sample_name] = json.load(fp)
+        
+print('Gathered {0} samples.'.format(len(report)))
+print('Writing assembly report to {0} ...'.format(output_path))
+with open(output_path, 'w') as f:
+    f.write('Sample\t{0}\n'.format('\t'.join(list(report[sample_name].keys()))))
+    for item in sorted(list(report.keys())):
+        output_line = [str(i) for i in list(report[item].values())]
+        f.write('{0}\t{1}\n'.format(item, '\t'.join(output_line)))

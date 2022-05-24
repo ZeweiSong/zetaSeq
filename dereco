@@ -1,0 +1,248 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Created on Thu May 19 17:33:42 2022
+
+Dereplicate a group of contigs
+
+dereco
+
+He who loves to comment his code is unlikely to have bad luck.
+@author: Song, Zewei
+@contact: songzewei@genomics.cn
+"""
+
+import argparse
+import sys
+import os
+import json
+from zetaSeq import io as seqIO
+
+def print_help():
+    print('')
+    print('Dereco: dereplicate a group of contigs')
+    print('--------------------')
+    print('Choose an option:')
+    print('prep\tPrepare a working folder')
+    print('cacl\tCalculate similarity and remove redundant sequences')
+    print('stat\tGenerate a report')
+    print('--------------------')
+    print('Song, Zewei')
+    print('songzewei@genomics.cn')
+    print('')
+
+def prep(args_input, args_output, args_cutoff):
+    print('Dereco: dereplicate a group of contigs')
+    print('Origin file: {0}'.format(args_input))
+    if args_input.endswith('.fa') or args_input.endswith('.fa.gz'):
+        if args_input.endswith('.fa'):
+            sn = args_input.split('/')[-1][:-3]
+        else:
+            sn = args_input.split('/')[-1][:-6]
+    else:
+        print('[ERROR] The input file has to be .fa or .fa.gz')
+        sys.exit()
+    print('File header: {0}'.format(sn))
+
+    # Check if the output folder exist
+    if not args_output.endswith('/'): args_output += '/'
+    if os.path.isdir(args_output):
+        print('[ERROR] The output folder {0} already exist, please check it.'.format(args_output))
+        sys.exit()
+    else:
+        os.mkdir(args_output)
+        print('Working folder generated at: {0}'.format(args_output))
+
+    # Write an option file
+    options = {'cutoff': args_cutoff, 'input': args_input, 'output': args_output}
+    with open(args_output + 'options.json', 'w') as f:
+        json.dump(options, f)
+
+    content = [i for i in seqIO.sequence(args_input)]
+    # check if input as redundant names:
+    names = [i[0] for i in content] # all names
+    names = set(names) # dereplicate the names array
+    if len(names) < len(content): # True if sequences have identical names:
+        count = 0
+        for item in content:
+            item[0] = 'origin_seq_' + str(count)
+
+    # Sort the original sequences by length
+    content.sort(key = lambda i:i[1], reverse=True)
+
+    # Write sequences to the working folder
+    print('Length cutoff: {0}'.format(args_cutoff))
+    file_large = args_output + sn + '.large.fa.gz'
+    file_small = args_output + sn + '.small.fa.gz'
+    c1 = seqIO.write_seqs([i for i in content if len(i[1]) >= args_cutoff], file_large, fastx='a', gz=True)
+    c2 = seqIO.write_seqs([i for i in content if len(i[1]) <  args_cutoff], file_small, fastx='a', gz=True)
+    print('File generated: {0} / {1}'.format(file_large, c1))
+    print('File generated: {0} / {1}'.format(file_small, c2))
+    if c1 == 0:
+        print('[ERROR] There is no sequences in the large file, please change the length cutoff using --cutoff')
+
+    return None
+
+# retuen a list of query names to be removed from alignments
+def derep_paf(input_paf):
+    removal = []
+    with open(input_paf, 'r') as f:
+        for line in f:
+            line = line.strip('\n').split('\t')
+            if line[0] != line[5] and int(line[1]) < int(line[6]): # alignment is short --> long
+                ident = float(int(line[10]) / int(line[9])) # This is the identity (similarity) of the alignment
+                match = float(int(line[10]) / (int(line[1]) - 0)) # This is the percent of length matched on query
+                if ident > 0.99 and match > 0.97:
+                    removal.append(line[0])
+        removal = set(removal)
+    return removal
+
+# reture a seq list by removing sequencs in the removal_list
+def remove_seqs(input_seqs, removal_list):
+    result = []
+    for item in seqIO.sequence(input_seqs):
+        if item[0] not in removal_list:
+            result.append(item)
+    return result
+
+def calc(args_input, args_output, args_threads):
+    if not args_input.endswith('/'): args_input += '/'
+    for item in os.listdir(args_input):
+        if item.endswith('.large.fa.gz'):
+            file_large = args_input + item
+        elif item.endswith('.small.fa.gz'):
+            file_small = args_input + item
+        elif item == 'options.json':
+            with open(args_input + 'options.json', 'r') as f:
+                options = json.load(f)
+        elif item == 'FINISHED':
+            print('[ERROR] Folder {0} is marked as FINISHED.'.format(args_input))
+            sys.exit()
+    print('Large file: {0}'.format(file_large))
+    print('Small file: {0}'.format(file_small))
+    print('Cutoff: {0}'.format(options['cutoff']))
+
+    count_large = len([i for i in seqIO.sequence(file_large)])
+    sum_large = sum([len(i[1]) for i in seqIO.sequence(file_large)])
+    count_small = len([i for i in seqIO.sequence(file_small)])
+    sum_small = sum([len(i[1]) for i in seqIO.sequence(file_small)])
+
+    # minimap2 asm5 large large
+    cmd = ['minimap2']
+    cmd += ['-x asm5']
+    cmd += ['-t ' + str(args_threads)]
+    cmd += [file_large]
+    cmd += [file_large]
+    cmd += ['-o ' + args_input + 'align_large_vs_large.paf']
+    cmd += ['2> /dev/null']
+    cmd = ' '.join(cmd)
+    print(cmd)
+    os.system(cmd)
+
+    # dereplicate large vs large
+    removal = derep_paf(args_input + 'align_large_vs_large.paf')
+    filter_large = remove_seqs(file_large, removal)
+    c1 = seqIO.write_seqs(filter_large, args_input + 'dereco_large_vs_large.fa.gz', fastx='a', gz=True)
+    sum1 = sum([len(i[1]) for i in filter_large])
+
+    # minimap2 asm5 large small
+    cmd = ['minimap2']
+    cmd += ['-x asm5']
+    cmd += ['-t ' + str(args_threads)]
+    cmd += [args_input + 'dereco_large_vs_large.fa.gz']
+    cmd += [file_small]
+    cmd += ['-o ' + args_input + 'align_small_vs_large.paf']
+    cmd += ['2> /dev/null']
+    cmd = ' '.join(cmd)
+    print(cmd)
+    os.system(cmd)
+
+    # dereplicate small vs large
+    removal = derep_paf(args_input + 'align_small_vs_large.paf')
+    filter_small = remove_seqs(file_small, removal)
+    c2 = seqIO.write_seqs(filter_small, args_input + 'dereco_small_vs_large.fa.gz', fastx='a', gz=True)
+    sum2 = sum([len(i[1]) for i in filter_small])
+
+    # minimap2 asm5 small vs small
+    cmd = ['minimap2']
+    cmd += ['-x asm5']
+    cmd += ['-t ' + str(args_threads)]
+    cmd += [args_input + 'dereco_small_vs_large.fa.gz']
+    cmd += [args_input + 'dereco_small_vs_large.fa.gz']
+    cmd += ['-o ' + args_input + 'align_small_vs_small.paf']
+    cmd += ['2> /dev/null']
+    cmd = ' '.join(cmd)
+    print(cmd)
+    os.system(cmd)
+
+    # dereplicate small vs small
+    removal = derep_paf(args_input + 'align_small_vs_small.paf')
+    filter_small = remove_seqs(args_input + 'dereco_small_vs_large.fa.gz', removal)
+    c3 = seqIO.write_seqs(filter_small, args_input + 'dereco_small_vs_small.fa.gz', fastx='a', gz=True)
+    sum3 = sum([len(i[1]) for i in filter_small])
+
+    # concat all
+    cmd = ['cat']
+    cmd += [args_input + 'dereco_large_vs_large.fa.gz']
+    cmd += [args_input + 'dereco_small_vs_small.fa.gz']
+    cmd += ['> ' + args_input + 'derecp_final.fa.gz']
+    cmd = ' '.join(cmd)
+    print(cmd)
+    os.system(cmd)
+
+    if os.path.isfile(args_input + 'derecp_final.fa.gz'):
+        os.system('touch ' + args_input + 'FINISHED')
+
+    print('Origin large: {0:,} (bps) / {1:,} (count)'.format(sum_large, count_large))
+    print('Origin small: {0:,} (bps) / {1:,} (count)'.format(sum_small, count_small))
+    print('Origin all: {0:,} (bps) / {1:,} (count)'.format(sum_large + sum_small, count_large + count_small))
+    print('Derep large: {0:,} (bps) / {1:,} (count)'.format(sum1, c1))
+    print('Derep small: {0:,} (bps) / {1:,} (count)'.format(sum3, c3))
+    print('Derep all: {0:,} (bps) / {1:,} (count)'.format(sum1 + sum3, c1 + c3))
+    print('Compression rate: {0:.2f}'.format((sum_large + sum_small) / (sum1 + sum3)))
+    print('Origin size / Derep size: {0:,} / {1:,}'.format(sum_large + sum_small, sum1 + sum3))
+
+def stat(args_input, args_output):
+    pass
+
+if len(sys.argv[:]) == 1:
+    option = ''
+else:
+    option = sys.argv[1]
+if option == 'prep':
+    print('Prepare a working folder')
+    parser = argparse.ArgumentParser(prog='dereco prep')
+    parser.add_argument('-i', '--input', help='Path to the original contigs group file.')
+    parser.add_argument('-o', '--output', help='Path to the output folder.')
+    parser.add_argument('-c', '--cutoff', type=int, default=1000000, help='Length cutff to divide the input.')
+    if len(sys.argv[:]) == 2:
+        parser.print_help()
+    else:
+        args = parser.parse_args(sys.argv[2:])
+        prep(args.input, args.output, args.cutoff)
+elif option == 'calc':
+    print('Calculate similarity and dereplicate')
+    parser = argparse.ArgumentParser(prog='dereco calc')
+    parser.add_argument('-i', '--input', help='Path to the prep output folder.')
+    parser.add_argument('-o', '--output', help='Path to the output folder')
+    parser.add_argument('-t', '--threads', type=int, help='Numer of threads')
+    if len(sys.argv[:]) == 2:
+        parser.print_help()
+    else:
+        args = parser.parse_args(sys.argv[2:])
+        calc(args.input, args.output, args.threads)
+elif option == 'stat':
+    print('Generate a report')
+    parser = argparse.ArgumentParser(prog='dereco stat')
+    parser.add_argument('-i', '--input', help='Path to the stat output folder.')
+    parser.add_argument('-o', '--output', help='Path to the report file')
+    if len(sys.argv[:]) == 2:
+        parser.print_help()
+    else:
+        args = parser.parse_args(sys.argv[2:])
+        stat(args.input, args.output)
+else:
+    print_help()

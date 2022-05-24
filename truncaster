@@ -1,0 +1,92 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Dec 11 16:59:32 2017
+
+USAGE: truncaster -r1 my_sequences.1.fq.gz -r2 my_sequeces.2.fq.gz -o my_qced_sequences -r 0.01 -l 100 # trim pair end sequences
+       truncaster -r1 my_sequences.fq.gz -o my_qced_sequences.fq.gz # Trim single end sequences, -r and -l has default value.
+       truncaster -r1 my_sequences.1.fq.gz -r2 my_sequeces.2.fq.gz -o my_qced_seque -t 1000000 # set a larger trunk
+
+@author: Song, Zewei (BGI, China)
+@email: songzewei@genomcis.cn
+"""
+from __future__ import print_function
+from __future__ import division
+from zetaSeq import io as seqIO
+from zetaSeq import qc as seqQC
+import argparse
+import time
+import textwrap
+
+parser = argparse.ArgumentParser(
+        prog='truncaster',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=textwrap.dedent('''\
+            EXAMPLE:
+                truncaster -r1 my_sequences.1.fq.gz -r2 my_sequeces.2.fq.gz -o my_qced_sequences -r 0.01 -l 100 # trim pair end sequences
+                truncaster -r1 my_sequences.fq.gz -o my_qced_sequences.fq.gz # Trim single end sequences, -r and -l has default value.
+                truncaster -r1 my_sequences.1.fq.gz -r2 my_sequeces.2.fq.gz -o my_qced_seque -t 1000000 # set a larger trunk
+        '''),
+        epilog=textwrap.dedent('''\
+            ----------
+            Author: Song, Zewei (BGI, China)
+            Contact: songzewei@genomics.cn
+            '''))
+parser.add_argument('-r1', type=str, help='Path for r1 file.')
+parser.add_argument('-r2', type=str, help='Path for r2 file.')
+parser.add_argument('-o', type=str, help='Output FASTQ file.')
+parser.add_argument('-r', default=0.01, type=float, help='Expected Error rate, EE/bp, default = 0.01')
+parser.add_argument('-l', default=100, type=int, help='Minimum length to keep, >=, default = 100')
+parser.add_argument('-t', default=100000, type=int, help='Trunk size, default = 100,000')
+args = parser.parse_args()
+r1_file = args.r1
+if args.r2:
+    r2 = args.r2
+output_file = args.o
+rate = float(args.r)
+ml = int(args.l)
+trunk = int(args.t)
+t1 = time.clock()
+print('Reading {0} by trunk ({1}) ...'.format(input_file, trunk))
+#%% Truncate filter at maxE rate 0.01
+if args.r2: # Sequences ar paired.
+    r1, r2 = seqIO.sequence_twin_trunk(r1_file, r2_file, trunk_size=trunk)
+else: # Sequence is single end.
+    r1 = seqIO.sequence_trunk(r1_file, trunk_size=trunk)
+
+p_dict = seqQC.qual_score()
+
+i = 0
+j = 0
+c = 0
+
+if args.r2:
+    for t1, t2 in zip(r1, r2):
+        c += 1
+        content_r1 = []
+        content_r2 = []
+        for s1, s2 in zip(t1, t2):
+            i += 1
+            f1 = seqQC.trunc_ee_rate(s1, p_dict, rate=rate)
+            f2 = seqQC.trunc_ee_rate(s2, p_dict, rate=rate)
+            if len(f1) >= ml and len(f2) >= ml:
+                content_r1.append(f1)
+                content_r2.append(f2)
+                j += 1
+        count = seqIO.write_seqs(content_r1, output_file + '.1.fq.gz', fastx='q', mode='a')
+        count = seqIO.write_seqs(content_r2, output_file + '.2.fq.gz', fastx='q', mode='a')
+else:
+    for trunk in r1:
+        c += 1
+        content = []
+        for record in trunk:
+            i += 1
+            filtered = seqQC.trunc_ee_rate(record, p_dict, rate=rate)
+            if len(filtered[1]) >= ml:
+                content.append(filtered)
+                j += 1
+        count = seqIO.write_seqs(content, output_file, fastx='q', mode='a')
+print('Expected error rate = {0}, Minimum length = {1}'.format(rate, ml))
+print('Filtered {0}, kept {1}'.format(i, j))
+t2 = time.clock()
+print('Use {0} s.'.format(t2-t1))
