@@ -161,4 +161,4 @@ NCBI is nasty for using a string of number known as `taxid` to organism their ge
 
 # DereCo
 
-Remove redundant (duplicated) sequences from a group of contigs generated from a co-assembly approach.
+Remove redundant (duplicated) sequences from a group of contigs generated from a co-assembly approach (samples assembled invididually, not combined, usually due to large sample number).
