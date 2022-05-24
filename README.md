@@ -161,4 +161,15 @@ NCBI is nasty for using a string of number known as `taxid` to organism their ge
 
 # DereCo
 
-Remove redundant (duplicated) sequences from a group of contigs generated from a co-assembly approach.
+Remove redundant (duplicated) sequences from a group of contigs generated from a co-assembly approach (samples assembled invididually, not combined, usually due to large sample number).
+
+    # Preparea working folder
+    ./dereco prep -i data/contigs.fa -o derep_out/ -c 1000000
+
+    # We set the length cutoff to 1M,
+    # sequences longer than 1000000 will be saved in one file,
+    # and sequences shorter than 1M will be saved in another file.
+    # First we will dereplicate the large file by aligning it to itself.
+    # Then we dereplicate the small file by aligning it to the new large file.
+    # Finaly, we dereplicate the small file further by aligning it to itself.
+    ./dereco cacl -i derep_out/ -t 8
