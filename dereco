@@ -63,8 +63,10 @@ def prep(args_input, args_output, args_cutoff):
         json.dump(options, f)
 
     # Rename the sequence names to avoid duplicated label
-    cmd = ['seqtk rename']
+    cmd = ['seqtk seq -C']
     cmd += [args_input]
+    cmd += ['|']
+    cmd += ['seqtk rename -']
     cmd += ['contigs_']
     cmd += ['>']
     cmd += [args_output + sn + '.renamed.fa']
