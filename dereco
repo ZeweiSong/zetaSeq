@@ -145,9 +145,11 @@ def calc(args_input, args_threads):
 
     # dereplicate large vs large
     removal = derep_paf(args_input + 'align_large_vs_large.paf')
+    print('Removing {0} sequences ...'.format(len(removal)))
     filter_large = remove_seqs(file_large, removal)
     c1 = seqIO.write_seqs(filter_large, args_input + 'dereco_large_vs_large.fa.gz', fastx='a', gz=True)
     sum1 = sum([len(i[1]) for i in filter_large])
+    print('Dereplicated large file: {0:,} -> {1:,} (bps) / {2:,} -> {3:,} (count)'.format(sum_large, sum1, count_large, c1))
 
     # minimap2 asm5 large small
     cmd = ['minimap2']
@@ -163,9 +165,11 @@ def calc(args_input, args_threads):
 
     # dereplicate small vs large
     removal = derep_paf(args_input + 'align_small_vs_large.paf')
+    print('Removing {0} sequences ...'.format(len(removal)))
     filter_small = remove_seqs(file_small, removal)
     c2 = seqIO.write_seqs(filter_small, args_input + 'dereco_small_vs_large.fa.gz', fastx='a', gz=True)
     sum2 = sum([len(i[1]) for i in filter_small])
+    print('Dereplicated small file: {0:,} -> {1:,} (bps) / {2:,} -> {3:,} (count)'.format(sum_small, sum2, count_small, c2))
 
     # minimap2 asm5 small vs small
     cmd = ['minimap2']
@@ -181,9 +185,11 @@ def calc(args_input, args_threads):
 
     # dereplicate small vs small
     removal = derep_paf(args_input + 'align_small_vs_small.paf')
+    print('Removing {0} sequences ...'.format(len(removal)))
     filter_small = remove_seqs(args_input + 'dereco_small_vs_large.fa.gz', removal)
     c3 = seqIO.write_seqs(filter_small, args_input + 'dereco_small_vs_small.fa.gz', fastx='a', gz=True)
     sum3 = sum([len(i[1]) for i in filter_small])
+    print('Dereplicated small file: {0:,} -> {1:,} -> {2:,} (bps) / {3:,} -> {4:,} -> {5:,} (count)'.format(sum_small, sum2, sum3, count_small, c2, c3))
 
     # concat all
     cmd = ['cat']
