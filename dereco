@@ -20,6 +20,7 @@ import argparse
 import sys
 import os
 import json
+import shutil
 from zetaSeq import io as seqIO
 
 def print_help():
@@ -89,7 +90,13 @@ def prep(args_input, args_output, args_cutoff):
     print('[VSEARCH] ' + cmd)
     os.system(cmd)
     os.remove(args_output + sn + '.renamed.fa')
-    
+   
+    if os.stat(file_large).st_size == 0: # Check fi large file is empty
+        print('[DereCo] The large file is empty, you may want to lower the cutoff.')
+        shutil.rmtree(args_output)
+        print('[DereCo] {0} removed'.format(args_output))
+        print('[DereCo] EXIT')
+        sys.exit() 
     print('[DereCo] Generated the LARGE file: {0}.gz'.format(file_large))
     print('[DereCo] Generated the SMALL file: {0}.gz'.format(file_small))
     print('[DereCo] to dereplicate, run: dereco calc -i {0} -t [threads]'.format(args_output))
