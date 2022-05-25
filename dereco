@@ -62,38 +62,44 @@ def prep(args_input, args_output, args_cutoff):
     with open(args_output + 'options.json', 'w') as f:
         json.dump(options, f)
 
-    content = [i for i in seqIO.sequence(args_input)]
-    for item in content: # Remove strings after the first SPACE
-        item[0] = item[0].split(' ')[0]
-    print('Loaded {0} sequences.'.format(len(content)))
-
-    # check if input as redundant names:
-    names = [i[0] for i in content] # all names
-    names_len = [len(names), 0]
-    names = set(names) # dereplicate the names array
-    names_len[1] = len(names)
-    print('Names / Unique names: {0:,} / {1:,}'.format(names_len[0], names_len[1]))
-    if len(names) < len(content): # True if sequences have identical names:
-        print('Found duplicated names, will rename all sequences')
-        count = 0
-        for item in content:
-            item[0] = 'origin_seq_' + str(count)
-
-    # Sort the original sequences by length
-    content.sort(key = lambda i:i[1], reverse=True)
-
-    # Write sequences to the working folder
+    # Rename the sequence names to avoid duplicated label
+    cmd = ['seqtk rename']
+    cmd += [args_input]
+    cmd += ['contigs_']
+    cmd += ['>']
+    cmd += [args_output + sn + '.renamed.fa']
+    cmd = ' '.join(cmd)
+    print('[SEQTK] ' + cmd)
+    os.system(cmd)
+    cmd = 'pigz -p 4 ' + args_output + sn + '.renamed.fa'
+    print('[PIGZ] ' + cmd)
+    os.system(cmd)
+    
+    # Write large and small sequences to the working folder
     print('Length cutoff: {0}'.format(args_cutoff))
-    file_large = args_output + sn + '.large.fa.gz'
-    file_small = args_output + sn + '.small.fa.gz'
-    c1 = seqIO.write_seqs([i for i in content if len(i[1]) >= args_cutoff], file_large, fastx='a', gz=True)
-    print('Write {0:,} seqs to the large file.'.format(c1))
-    c2 = seqIO.write_seqs([i for i in content if len(i[1]) <  args_cutoff], file_small, fastx='a', gz=True)
-    print('Write {0:,} seqs to the small file.'.format(c2))
-    print('File generated: {0} / {1:,}'.format(file_large, c1))
-    print('File generated: {0} / {1:,}'.format(file_small, c2))
-    if c1 == 0:
-        print('[ERROR] There is no sequences in the large file, please change the length cutoff using --cutoff')
+    file_large = args_output + sn + '.large.fa'
+    file_small = args_output + sn + '.small.fa'
+    cmd = ['vsearch --fastx_filter']
+    cmd += [args_output + sn + '.renamed.fa.gz']
+    cmd += ['--fastq_minlen ' + str(args_cutoff)]
+    cmd += ['--fastaout ' + file_large]
+    cmd += ['--fastaout_discarded ' + file_small]
+    cmd += ['--fasta_width 0']
+    cmd += ['--quiet']
+    cmd = ' '.join(cmd)
+    print('[VSEARCH] ' + cmd)
+    os.system(cmd)
+    os.remove(args_output + sn + '.renamed.fa.gz')
+    cmd = 'pigz -p 4 ' + file_large
+    print('[PIGZ] ' + cmd)
+    os.system(cmd)
+    cmd = 'pigz -p 4 ' + file_small
+    print('[PIGZ] ' + cmd)
+    os.system(cmd)
+    
+    print('[DereCo] Generated the LARGE file: {0}.gz'.format(file_large))
+    print('[DereCo] Generated the SMALL file: {0}.gz'.format(file_small))
+    print('[DereCo] to dereplicate, run: dereco calc -i {0} -t [threads]'.format(args_output))
 
     return None
 
