@@ -63,10 +63,13 @@ def prep(args_input, args_output, args_cutoff):
         json.dump(options, f)
 
     content = [i for i in seqIO.sequence(args_input)]
+    print('Loaded {0} sequences.'.format(len(content)))
+
     # check if input as redundant names:
     names = [i[0] for i in content] # all names
     names = set(names) # dereplicate the names array
     if len(names) < len(content): # True if sequences have identical names:
+        print('Found duplicated names, will rename all sequences')
         count = 0
         for item in content:
             item[0] = 'origin_seq_' + str(count)
@@ -79,9 +82,11 @@ def prep(args_input, args_output, args_cutoff):
     file_large = args_output + sn + '.large.fa.gz'
     file_small = args_output + sn + '.small.fa.gz'
     c1 = seqIO.write_seqs([i for i in content if len(i[1]) >= args_cutoff], file_large, fastx='a', gz=True)
+    print('Write {0:,} seqs to the large file.'.format(c1))
     c2 = seqIO.write_seqs([i for i in content if len(i[1]) <  args_cutoff], file_small, fastx='a', gz=True)
-    print('File generated: {0} / {1}'.format(file_large, c1))
-    print('File generated: {0} / {1}'.format(file_small, c2))
+    print('Write {0:,} seqs to the small file.'.format(c2))
+    print('File generated: {0} / {1:,}'.format(file_large, c1))
+    print('File generated: {0} / {1:,}'.format(file_small, c2))
     if c1 == 0:
         print('[ERROR] There is no sequences in the large file, please change the length cutoff using --cutoff')
 
