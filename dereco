@@ -63,11 +63,16 @@ def prep(args_input, args_output, args_cutoff):
         json.dump(options, f)
 
     content = [i for i in seqIO.sequence(args_input)]
+    for item in content: # Remove strings after the first SPACE
+        item[0] = item[0].split(' ')[0]
     print('Loaded {0} sequences.'.format(len(content)))
 
     # check if input as redundant names:
     names = [i[0] for i in content] # all names
+    names_len = [len(names), 0]
     names = set(names) # dereplicate the names array
+    names_len[1] = len(names)
+    print('Names / Unique names: {0:,} / {1:,}'.format(names_len[0], names_len[1]))
     if len(names) < len(content): # True if sequences have identical names:
         print('Found duplicated names, will rename all sequences')
         count = 0
@@ -112,8 +117,6 @@ def remove_seqs(input_seqs, removal_list):
     for item in seqIO.sequence(input_seqs):
         if item[0] not in removal_list:
             result.append(item)
-        else:
-            print(item[0])
     return result
 
 def calc(args_input, args_threads):
@@ -192,7 +195,6 @@ def calc(args_input, args_threads):
 
     # dereplicate small vs small
     removal = derep_paf(args_input + 'align_small_vs_small.paf')
-    print(removal)
     print('[DereCo] Removing {0} sequences ...'.format(len(removal)))
     filter_small = remove_seqs(args_input + 'dereco_small_vs_large.fa.gz', removal)
     c3 = seqIO.write_seqs(filter_small, args_input + 'dereco_small_vs_small.fa.gz', fastx='a', gz=True)
