@@ -161,10 +161,19 @@ def calc(args_input, args_threads):
 
     # dereplicate large vs large
     removal = derep_paf(args_input + 'align_large_vs_large.paf')
+    keep = [i[0] for i in seqIO.sequence(file_large) if i[0] not in removal]
     print('[DereCo] Removing {0} sequences ...'.format(len(removal)))
-    filter_large = remove_seqs(file_large, removal)
-    c1 = seqIO.write_seqs(filter_large, args_input + 'dereco_large_vs_large.fa', fastx='a', gz=False)
-    sum1 = sum([len(i[1]) for i in filter_large])
+    with open(args_input + 'kplist', 'w') as f:
+        f.write('{0}\n'.format('\n'.join(keep)))
+    cmd = ['seqtk subseq']
+    cmd += [file_large]
+    cmd += [args_input + 'kplist']
+    cmd += ['> ' + args_input + 'dereco_large_vs_large.fa']
+    cmd = ' '.join(cmd)
+    print('[SEQTK] ' + cmd)
+    os.system(cmd)
+    c1 = len([i for i in seqIO.sequence(args_input + 'dereco_large_vs_large.fa')])
+    sum1 = sum([len(i[1]) for i in seqIO.sequence(args_input + 'dereco_large_vs_large.fa')])
     print('[DereCo] Dereplicated large file: {0:,} -> {1:,} (bps) / {2:,} -> {3:,} (count)'.format(sum_large, sum1, count_large, c1))
 
     # minimap2 asm5 large small
@@ -181,10 +190,19 @@ def calc(args_input, args_threads):
 
     # dereplicate small vs large
     removal = derep_paf(args_input + 'align_small_vs_large.paf')
+    keep = [i[0] for i in seqIO.sequence(file_small) if i[0] not in removal]
     print('[DereCo] Removing {0} sequences ...'.format(len(removal)))
-    filter_small = remove_seqs(file_small, removal)
-    c2 = seqIO.write_seqs(filter_small, args_input + 'dereco_small_vs_large.fa', fastx='a', gz=False)
-    sum2 = sum([len(i[1]) for i in filter_small])
+    with open(args_input + 'kplist', 'w') as f:
+        f.write('{0}\n'.format('\n'.join(keep)))
+    cmd = ['seqtk subseq']
+    cmd += [file_large]
+    cmd += [args_input + 'kplist']
+    cmd += ['> ' + args_input + 'dereco_small_vs_large.fa']
+    cmd = ' '.join(cmd)
+    print('[SEQTK] ' + cmd)
+    os.system(cmd)
+    c2 = len([i for i in seqIO.sequence(args_input + 'dereco_small_vs_large.fa')])
+    sum2 = sum([len(i[1]) for i in seqIO.sequence(args_input + 'dereco_small_vs_large.fa')])
     print('[DereCo] Dereplicated small file: {0:,} -> {1:,} (bps) / {2:,} -> {3:,} (count)'.format(sum_small, sum2, count_small, c2))
 
     # minimap2 asm5 small vs small
@@ -201,10 +219,19 @@ def calc(args_input, args_threads):
 
     # dereplicate small vs small
     removal = derep_paf(args_input + 'align_small_vs_small.paf')
+    keep = [i[0] for i in seqIO.sequence(args_input + 'dereco_small_vs_large.fa') if i[0] not in removal]
     print('[DereCo] Removing {0} sequences ...'.format(len(removal)))
-    filter_small = remove_seqs(args_input + 'dereco_small_vs_large.fa', removal)
-    c3 = seqIO.write_seqs(filter_small, args_input + 'dereco_small_vs_small.fa', fastx='a', gz=False)
-    sum3 = sum([len(i[1]) for i in filter_small])
+    with open(args_input + 'kplist', 'w') as f:
+        f.write('{0}\n'.format('\n'.join(keep)))
+    cmd = ['seqtk subseq']
+    cmd += [file_large]
+    cmd += [args_input + 'kplist']
+    cmd += ['> ' + args_input + 'dereco_small_vs_small.fa']
+    cmd = ' '.join(cmd)
+    print('[SEQTK] ' + cmd)
+    os.system(cmd)
+    c3 = len([i for i in seqIO.sequence(args_input + 'dereco_small_vs_small.fa')])
+    sum3 = sum([len(i[1]) for i in seqIO.sequence(args_input + 'dereco_small_vs_small.fa')])
     print('[DereCo] Dereplicated small file: {0:,} -> {1:,} -> {2:,} (bps) / {3:,} -> {4:,} -> {5:,} (count)'.format(sum_small, sum2, sum3, count_small, c2, c3))
 
     # concat all
@@ -213,7 +240,7 @@ def calc(args_input, args_threads):
     cmd += [args_input + 'dereco_small_vs_small.fa']
     cmd += ['> ' + args_input + 'derecp_final.fa']
     cmd = ' '.join(cmd)
-    print('[SHELL] ' + cmd)
+    print('[CAT] ' + cmd)
     os.system(cmd)
 
     if os.path.isfile(args_input + 'derecp_final.fa'):
