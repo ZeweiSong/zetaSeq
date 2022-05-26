@@ -36,18 +36,35 @@ def print_help():
     print('songzewei@genomics.cn')
     print('')
 
-def prep(args_input, args_output, args_cutoff):
+def create(args_input, args_output, args_cutoff, args_minlen):
     print('Dereco: dereplicate a group of contigs')
-    print('Origin file: {0}'.format(args_input))
-    if args_input.endswith('.fa') or args_input.endswith('.fa.gz'):
-        if args_input.endswith('.fa'):
-            sn = args_input.split('/')[-1][:-3]
+    folder = False
+    if os.path.isfile(args_input):
+        print('Origin file: {0}'.format(args_input))
+        if args_input.endswith('.fa') or args_input.endswith('.fa.gz'):
+            if args_input.endswith('.fa'):
+                sn = args_input.split('/')[-1][:-3]
+            else:
+                sn = args_input.split('/')[-1][:-6]
         else:
-            sn = args_input.split('/')[-1][:-6]
-    else:
-        print('[ERROR] The input file has to be .fa or .fa.gz')
-        sys.exit()
-    print('File header: {0}'.format(sn))
+            print('[ERROR] The input file has to be .fa or .fa.gz')
+            sys.exit()
+        print('File header: {0}'.format(sn))
+        target_file = args_input
+    elif os.path.isdir(args_input):
+        folder = True
+        if not args_input.endswith('/'): args_input += '/'
+        print('Origin directory: {0}'.format(args_input))
+        # Search in the target folder for all .fa.gz files, .fa will be ignored
+        count_fa = 0
+        fagz = []
+        for item in os.listdir(args_input):
+            if item.endswith('.fa.gz'):
+                fagz.append(args_input + item)
+            elif item.endswith('.fa'):
+                count_fa += 1
+        if count_fa > 0:
+            print('Found {0} .fa files in {1}, but will not add them to the working directory'.format(count_fa, args_input))
 
     # Check if the output folder exist
     if not args_output.endswith('/'): args_output += '/'
@@ -64,8 +81,17 @@ def prep(args_input, args_output, args_cutoff):
         json.dump(options, f)
 
     # Rename the sequence names to avoid duplicated label
-    cmd = ['seqtk seq -C']
-    cmd += [args_input]
+    if folder: # Target is a folder, will concat all its .fa.gz files first
+        cmd = ['cat']
+        cmd += [' '.join(fagz)]
+        cmd += ['> ' + args_output + 'tmp_cat.fa.gz']
+        target_file = args_output + 'tmp_cat.fa.gz'
+        cmd = ' '.join(cmd)
+        print('[SHELL] ' + cmd)
+        os.system(cmd)
+    cmd = ['seqtk seq -L ' + str(args_minlen)]
+    cmd += ['-C']
+    cmd += [target_file]
     cmd += ['|']
     cmd += ['seqtk rename -']
     cmd += ['contigs_']
