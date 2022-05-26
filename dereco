@@ -28,9 +28,9 @@ def print_help():
     print('DereCo: dereplicate a group of contigs')
     print('--------------------')
     print('Choose an option:')
-    print('create\tCREATE a working folder from a fromile or files in a directory.')
-    print('calculate\tCALCULATE similarity and remove redundant sequences.')
-    print('stat\tGenerate a report')
+    print('create     CREATE a working folder from a fromile or files in a directory.')
+    print('calculate  CALCULATE similarity and remove redundant sequences.')
+    print('update     UPDATE a working directory with new files in the target path.')
     print('--------------------')
     print('Song, Zewei')
     print('songzewei@genomics.cn')
@@ -313,7 +313,7 @@ if option == 'create':
     else:
         args = parser.parse_args(sys.argv[2:])
         create(args.input, args.output, args.cutoff, args.minlen)
-elif option == 'calculate' or 'calc':
+elif option in ('calculate', 'calc'):
     print('Calculate similarity and dereplicate')
     parser = argparse.ArgumentParser(prog='dereco calculate')
     parser.add_argument('-i', '--input', help='Path to the prep output folder.')
@@ -322,7 +322,7 @@ elif option == 'calculate' or 'calc':
         parser.print_help()
     else:
         args = parser.parse_args(sys.argv[2:])
-        calc(args.input, args.threads)
+        calculate(args.input, args.threads)
 elif option == 'update':
     print('Generate a report')
     parser = argparse.ArgumentParser(prog='dereco stat')
