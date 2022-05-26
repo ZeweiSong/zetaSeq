@@ -2,7 +2,7 @@
 
 `zetaSeq` is a Python library and program collections I wrote for myself when dealing with amplion data and later shotgun data of microbial communities. It is not a full pipeline, but contains various tools I found useful. Most of them were created because I cannot find the same function on the Internet. The order of sections however is organized in a workflow way of a metagenomic analysis.
 
-[1. Installation](zetaSeq#installation)
+[1. Installation](https://gitlab.genomics.cn/meer/zetaSeq#installation)
 
 [2. Basic sequence input and output](https://gitlab.genomics.cn/meer/zetaSeq#basic-sequence-input-and-output)
 
