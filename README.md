@@ -1,5 +1,5 @@
 <img
-  src="zetaseq.png"
+  src="zetaSeq.jpg"
   alt="zetaSeq"
   title="zetaSeq"
   style="display: inline-block; margin: 0 auto; max-width: 200px">
