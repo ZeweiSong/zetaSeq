@@ -29,7 +29,7 @@ def print_help():
     print('--------------------')
     print('Choose an option:')
     print('create\tCREATE a working folder from a fromile or files in a directory.')
-    print('cacl\tCalculate similarity and remove redundant sequences')
+    print('calculate\tCALCULATE similarity and remove redundant sequences.')
     print('stat\tGenerate a report')
     print('--------------------')
     print('Song, Zewei')
@@ -76,11 +76,9 @@ def create(args_input, args_output, args_cutoff, args_minlen):
         print('Working folder generated at: {0}'.format(args_output))
 
     # Write an option file
-    options = {'cutoff': args_cutoff, 'minlen': args_minlen,'input': args_input, 'output': args_output, 'folder': sum([folder])}
+    options = {'cutoff': args_cutoff, 'minlen': args_minlen,'input': args_input, 'output': args_output, 'folder': folder, 'finished': False}
     if folder:
-        options['added': fagz]
-    with open(args_output + 'options.json', 'w') as f:
-        json.dump(options, f)
+        options['added'] = fagz
 
     # Rename the sequence names to avoid duplicated label
     if folder: # Target is a folder, will concat all its .fa.gz files first
@@ -102,11 +100,15 @@ def create(args_input, args_output, args_cutoff, args_minlen):
     cmd = ' '.join(cmd)
     print('[SEQTK] ' + cmd)
     os.system(cmd)
-    
+    os.system('rm ' + args_output + 'tmp_cat.fa.gz')
+
     # Write large and small sequences to the working folder
     print('Length cutoff: {0}'.format(args_cutoff))
     file_large = args_output + sn + '.large.fa'
     file_small = args_output + sn + '.small.fa'
+    options['large_file': file_large]
+    options['small_file': file_small]
+
     cmd = ['vsearch --fastx_filter']
     cmd += [args_output + sn + '.renamed.fa']
     cmd += ['--fastq_minlen ' + str(args_cutoff)]
@@ -125,6 +127,11 @@ def create(args_input, args_output, args_cutoff, args_minlen):
         print('[DereCo] {0} removed'.format(args_output))
         print('[DereCo] EXIT')
         sys.exit() 
+    
+    # Save the options.json file
+    with open(args_output + 'options.json', 'w') as f:
+        json.dump(options, f)
+        
     print('[DereCo] Generated the LARGE file: {0}.gz'.format(file_large))
     print('[DereCo] Generated the SMALL file: {0}.gz'.format(file_small))
     print('[DereCo] to dereplicate, run: dereco calc -i {0} -t [threads]'.format(args_output))
@@ -161,19 +168,19 @@ def get_size_count(input_seqs):
         size += len(item[1])
     return size, count
 
-def calc(args_input, args_threads):
+def calculate(args_input, args_threads):
     if not args_input.endswith('/'): args_input += '/'
-    for item in os.listdir(args_input):
-        if item.endswith('.large.fa.gz') or item.endswith('.large.fa'):
-            file_large = args_input + item
-        elif item.endswith('.small.fa.gz') or item.endswith('.small.fa'):
-            file_small = args_input + item
-        elif item == 'options.json':
-            with open(args_input + 'options.json', 'r') as f:
-                options = json.load(f)
-        elif item == 'FINISHED':
-            print('[ERROR] Folder {0} is marked as FINISHED.'.format(args_input))
-            sys.exit()
+    if not os.path.isfile(args_input + 'options.json'):
+        print('[ERROR] Did not find options.json, use dereco create to set up the working directory.')
+        sys.exit()
+    else:
+        with open(args_input + 'options.json', 'r') as f:
+            options = json.load(f)
+            file_large = options['large_file']
+            file_small = options['small_file']
+            if options['finished']:
+                print('[ERROR] Directory {0} is marked as FINISHED.'.format(args_input))
+                sys.exit()
     print('Large file: {0}'.format(file_large))
     print('Small file: {0}'.format(file_small))
     print('Cutoff: {0}'.format(options['cutoff']))
@@ -306,9 +313,9 @@ if option == 'create':
     else:
         args = parser.parse_args(sys.argv[2:])
         create(args.input, args.output, args.cutoff, args.minlen)
-elif option == 'calc':
+elif option == 'calculate' or 'calc':
     print('Calculate similarity and dereplicate')
-    parser = argparse.ArgumentParser(prog='dereco calc')
+    parser = argparse.ArgumentParser(prog='dereco calculate')
     parser.add_argument('-i', '--input', help='Path to the prep output folder.')
     parser.add_argument('-t', '--threads', type=int, help='Numer of threads')
     if len(sys.argv[:]) == 2:
@@ -316,7 +323,7 @@ elif option == 'calc':
     else:
         args = parser.parse_args(sys.argv[2:])
         calc(args.input, args.threads)
-elif option == 'stat':
+elif option == 'update':
     print('Generate a report')
     parser = argparse.ArgumentParser(prog='dereco stat')
     parser.add_argument('-i', '--input', help='Path to the stat output folder.')
