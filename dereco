@@ -28,7 +28,7 @@ def print_help():
     print('DereCo: dereplicate a group of contigs')
     print('--------------------')
     print('Choose an option:')
-    print('prep\tPrepare a working folder')
+    print('create\tCREATE a working folder from a fromile or files in a directory.')
     print('cacl\tCalculate similarity and remove redundant sequences')
     print('stat\tGenerate a report')
     print('--------------------')
@@ -76,7 +76,9 @@ def create(args_input, args_output, args_cutoff, args_minlen):
         print('Working folder generated at: {0}'.format(args_output))
 
     # Write an option file
-    options = {'cutoff': args_cutoff, 'input': args_input, 'output': args_output}
+    options = {'cutoff': args_cutoff, 'minlen': args_minlen,'input': args_input, 'output': args_output, 'folder': sum([folder])}
+    if folder:
+        options['added': fagz]
     with open(args_output + 'options.json', 'w') as f:
         json.dump(options, f)
 
@@ -292,17 +294,18 @@ if len(sys.argv[:]) == 1:
     option = ''
 else:
     option = sys.argv[1]
-if option == 'prep':
-    print('Prepare a working folder')
-    parser = argparse.ArgumentParser(prog='dereco prep')
+if option == 'create':
+    print('CREATE a working folder from a file or files in a directory.')
+    parser = argparse.ArgumentParser(prog='dereco create')
     parser.add_argument('-i', '--input', help='Path to the original contigs group file.')
     parser.add_argument('-o', '--output', help='Path to the output folder.')
     parser.add_argument('-c', '--cutoff', type=int, default=1000000, help='Length cutff to divide the input.')
+    parser.add_argument('-m', '--minlen', type=int, default=2000, help='Minimum length to keep a sequence.')
     if len(sys.argv[:]) == 2:
         parser.print_help()
     else:
         args = parser.parse_args(sys.argv[2:])
-        prep(args.input, args.output, args.cutoff)
+        create(args.input, args.output, args.cutoff, args.minlen)
 elif option == 'calc':
     print('Calculate similarity and dereplicate')
     parser = argparse.ArgumentParser(prog='dereco calc')
