@@ -276,12 +276,13 @@ def calculate(args_input, args_threads):
     cmd = ['cat']
     cmd += [args_input + 'dereco_large_vs_large.fa']
     cmd += [args_input + 'dereco_small_vs_small.fa']
-    cmd += ['> ' + args_input + 'derecp_final.fa']
+    cmd += ['> ' + args_input + 'dereco_final.fa']
     cmd = ' '.join(cmd)
-    print('[CAT] ' + cmd)
+    print('[SHELL] ' + cmd)
     os.system(cmd)
+    options['final': args_input + 'dereco_final.fa']
 
-    if os.path.isfile(args_input + 'derecp_final.fa'):
+    if os.path.isfile(args_input + 'dereco_final.fa'):
         os.system('touch ' + args_input + 'FINISHED')
     
     print('\n\t---Report---')
