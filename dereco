@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 Created on Thu May 19 17:33:42 2022
 
@@ -23,6 +21,7 @@ import json
 import shutil
 from zetaSeq import io as seqIO
 
+
 def print_help():
     print('')
     print('DereCo: dereplicate a group of contigs')
@@ -36,10 +35,12 @@ def print_help():
     print('songzewei@genomics.cn')
     print('')
 
+
 def create(args_input, args_output, args_cutoff, args_minlen):
     print('Dereco: dereplicate a group of contigs')
     folder = False
-    if os.path.isfile(args_input):
+    fagz = []
+    if os.path.isfile(args_input):  # Input is a file
         print('Origin file: {0}'.format(args_input))
         if args_input.endswith('.fa') or args_input.endswith('.fa.gz'):
             if args_input.endswith('.fa'):
@@ -51,20 +52,21 @@ def create(args_input, args_output, args_cutoff, args_minlen):
             sys.exit()
         print('File header: {0}'.format(sn))
         target_file = args_input
-    elif os.path.isdir(args_input):
+    elif os.path.isdir(args_input):  # Input is a folder
         folder = True
         if not args_input.endswith('/'): args_input += '/'
+        sn = args_input.split[:-1].split('/')[-1]
         print('Origin directory: {0}'.format(args_input))
         # Search in the target folder for all .fa.gz files, .fa will be ignored
         count_fa = 0
-        fagz = []
         for item in os.listdir(args_input):
             if item.endswith('.fa.gz'):
                 fagz.append(args_input + item)
             elif item.endswith('.fa'):
                 count_fa += 1
         if count_fa > 0:
-            print('Found {0} .fa files in {1}, but will not add them to the working directory'.format(count_fa, args_input))
+            print('Found {0} .fa files in {1}, but will not add them to the working directory'.format(count_fa,
+                                                                                                      args_input))
 
     # Check if the output folder exist
     if not args_output.endswith('/'): args_output += '/'
@@ -76,12 +78,15 @@ def create(args_input, args_output, args_cutoff, args_minlen):
         print('Working folder generated at: {0}'.format(args_output))
 
     # Write an option file
-    options = {'cutoff': args_cutoff, 'minlen': args_minlen,'input': args_input, 'output': args_output, 'folder': folder, 'finished': False}
+    options = {'cutoff': args_cutoff, 'minlen': args_minlen,
+               'target': args_input, 'wd': args_output,
+               'folder': folder, 'final': '', 'finished': False,
+               'threads': 1, 'added': [], 'sn': sn}
     if folder:
         options['added'] = fagz
 
     # Rename the sequence names to avoid duplicated label
-    if folder: # Target is a folder, will concat all its .fa.gz files first
+    if folder:  # Target is a folder, will concat all its .fa.gz files first
         cmd = ['cat']
         cmd += [' '.join(fagz)]
         cmd += ['> ' + args_output + 'tmp_cat.fa.gz']
@@ -100,14 +105,14 @@ def create(args_input, args_output, args_cutoff, args_minlen):
     cmd = ' '.join(cmd)
     print('[SEQTK] ' + cmd)
     os.system(cmd)
-    os.system('rm ' + args_output + 'tmp_cat.fa.gz')
+    os.system('rm ' + args_output + 'tmp_cat.fa.gz')  # remove the temp cat file
 
     # Write large and small sequences to the working folder
     print('Length cutoff: {0}'.format(args_cutoff))
     file_large = args_output + sn + '.large.fa'
     file_small = args_output + sn + '.small.fa'
-    options['large_file': file_large]
-    options['small_file': file_small]
+    options['large_file'] = file_large
+    options['small_file'] = file_small
 
     cmd = ['vsearch --fastx_filter']
     cmd += [args_output + sn + '.renamed.fa']
@@ -120,23 +125,25 @@ def create(args_input, args_output, args_cutoff, args_minlen):
     print('[VSEARCH] ' + cmd)
     os.system(cmd)
     os.remove(args_output + sn + '.renamed.fa')
-   
-    if os.stat(file_large).st_size == 0: # Check fi large file is empty
+
+    if os.stat(file_large).st_size == 0:  # Check if the large file is empty
         print('[DereCo] The large file is empty, you may want to lower the cutoff.')
         shutil.rmtree(args_output)
         print('[DereCo] {0} removed'.format(args_output))
         print('[DereCo] EXIT')
-        sys.exit() 
-    
-    # Save the options.json file
+        sys.exit()
+
+        # Save the options.json file
     with open(args_output + 'options.json', 'w') as f:
         json.dump(options, f)
-        
-    print('[DereCo] Generated the LARGE file: {0}.gz'.format(file_large))
-    print('[DereCo] Generated the SMALL file: {0}.gz'.format(file_small))
-    print('[DereCo] to dereplicate, run: dereco calc -i {0} -t [threads]'.format(args_output))
+
+    print('[DereCo] Generated the LARGE file: {0}'.format(file_large))
+    print('[DereCo] Generated the SMALL file: {0}'.format(file_small))
+    print('[DereCo] Generated options.jaon')
+    print('[DereCo] Next run: dereco calculate -i {0} -t [threads]'.format(args_output))
 
     return None
+
 
 # retuen a list of query names to be removed from alignments
 def derep_paf(input_paf):
@@ -144,13 +151,14 @@ def derep_paf(input_paf):
     with open(input_paf, 'r') as f:
         for line in f:
             line = line.strip('\n').split('\t')
-            if line[0] != line[5] and int(line[1]) < int(line[6]): # alignment is short --> long
-                ident = float(int(line[10]) / int(line[9])) # This is the identity (similarity) of the alignment
-                match = float(int(line[10]) / (int(line[1]) - 0)) # This is the percent of length matched on query
+            if line[0] != line[5] and int(line[1]) < int(line[6]):  # alignment is short --> long
+                ident = float(int(line[10]) / int(line[9]))  # This is the identity (similarity) of the alignment
+                match = float(int(line[10]) / (int(line[1]) - 0))  # This is the percent of length matched on query
                 if ident > 0.99 and match > 0.97:
                     removal.append(line[0])
         removal = set(removal)
     return removal
+
 
 # reture a seq list by removing sequencs in the removal_list
 def remove_seqs(input_seqs, removal_list):
@@ -160,6 +168,7 @@ def remove_seqs(input_seqs, removal_list):
             result.append(item)
     return result
 
+
 def get_size_count(input_seqs):
     size = 0
     count = 0
@@ -168,23 +177,26 @@ def get_size_count(input_seqs):
         size += len(item[1])
     return size, count
 
+
 def calculate(args_input, args_threads):
     if not args_input.endswith('/'): args_input += '/'
     if not os.path.isfile(args_input + 'options.json'):
-        print('[ERROR] Did not find options.json, use dereco create to set up the working directory.')
+        print('[ERROR] Did not find options.json, use "dereco create" to set up the working directory.')
         sys.exit()
     else:
         with open(args_input + 'options.json', 'r') as f:
             options = json.load(f)
+            options['threads'] = int(args_threads)
             file_large = options['large_file']
             file_small = options['small_file']
             if options['finished']:
                 print('[ERROR] Directory {0} is marked as FINISHED.'.format(args_input))
+                print('[DereCo] EXIT')
                 sys.exit()
     print('Large file: {0}'.format(file_large))
     print('Small file: {0}'.format(file_small))
     print('Cutoff: {0}'.format(options['cutoff']))
-
+    print('Minimum length: {0}'.format(options['minlen']))
     sum_large, count_large = get_size_count(file_large)
     sum_small, count_small = get_size_count(file_small)
 
@@ -214,7 +226,8 @@ def calculate(args_input, args_threads):
     print('[SEQTK] ' + cmd)
     os.system(cmd)
     sum1, c1 = get_size_count(args_input + 'dereco_large_vs_large.fa')
-    print('[DereCo] Dereplicated large file: {0:,} -> {1:,} (bps) / {2:,} -> {3:,} (count)'.format(sum_large, sum1, count_large, c1))
+    print('[DereCo] Dereplicated large file: {0:,} -> {1:,} (bps) / {2:,} -> {3:,} (count)'.format(sum_large, sum1,
+                                                                                                   count_large, c1))
 
     # minimap2 asm5 large small
     cmd = ['minimap2']
@@ -241,8 +254,9 @@ def calculate(args_input, args_threads):
     cmd = ' '.join(cmd)
     print('[SEQTK] ' + cmd)
     os.system(cmd)
-    sum2,c2 = get_size_count(args_input + 'dereco_small_vs_large.fa')
-    print('[DereCo] Dereplicated small file: {0:,} -> {1:,} (bps) / {2:,} -> {3:,} (count)'.format(sum_small, sum2, count_small, c2))
+    sum2, c2 = get_size_count(args_input + 'dereco_small_vs_large.fa')
+    print('[DereCo] Dereplicated small file: {0:,} -> {1:,} (bps) / {2:,} -> {3:,} (count)'.format(sum_small, sum2,
+                                                                                                   count_small, c2))
 
     # minimap2 asm5 small vs small
     cmd = ['minimap2']
@@ -269,22 +283,27 @@ def calculate(args_input, args_threads):
     cmd = ' '.join(cmd)
     print('[SEQTK] ' + cmd)
     os.system(cmd)
-    sum3,c3 = get_size_count(args_input + 'dereco_small_vs_small.fa')
-    print('[DereCo] Dereplicated small file: {0:,} -> {1:,} -> {2:,} (bps) / {3:,} -> {4:,} -> {5:,} (count)'.format(sum_small, sum2, sum3, count_small, c2, c3))
+    sum3, c3 = get_size_count(args_input + 'dereco_small_vs_small.fa')
+    print('[DereCo] Dereplicated small file: {0:,} -> {1:,} -> {2:,} (bps) / {3:,} -> {4:,} -> {5:,} (count)'.format(
+        sum_small, sum2, sum3, count_small, c2, c3))
 
-    # concat all
+    # concat all and rename with prefix nrc_ aka Non-redundant contigs
     cmd = ['cat']
     cmd += [args_input + 'dereco_large_vs_large.fa']
     cmd += [args_input + 'dereco_small_vs_small.fa']
-    cmd += ['> ' + args_input + 'dereco_final.fa']
+    cmd += ['| seqtk rename - nrc_ >' + args_input + 'dereco_final.fa']
     cmd = ' '.join(cmd)
     print('[SHELL] ' + cmd)
     os.system(cmd)
-    options['final': args_input + 'dereco_final.fa']
+
+    options['final'] = args_input + 'dereco_final.fa'
+    options['finished'] = True
+    with open(args_input + 'options.json', 'r') as f:
+        json.dump(options, f)
 
     if os.path.isfile(args_input + 'dereco_final.fa'):
         os.system('touch ' + args_input + 'FINISHED')
-    
+
     print('\n\t---Report---')
     print('Origin large: {0:,} (bps) / {1:,} (count)'.format(sum_large, count_large))
     print('Origin small: {0:,} (bps) / {1:,} (count)'.format(sum_small, count_small))
@@ -294,9 +313,68 @@ def calculate(args_input, args_threads):
     print('Derep all: {0:,} (bps) / {1:,} (count)'.format(sum1 + sum3, c1 + c3))
     print('Compression rate: {0:.2f}'.format((sum_large + sum_small) / (sum1 + sum3)))
     print('Origin size / Derep size: {0:,} / {1:,}'.format(sum_large + sum_small, sum1 + sum3))
+    if options['folder']:
+        print('To update: dereco update -i {0} -t [threads]'.format(options['input']))
 
-def stat(args_input, args_output):
-    pass
+
+def update(args_input, args_threads):
+    # Check options.json
+    if os.path.isfile(args_input + 'options.json'):
+        with open(args_input + 'options.json', 'r') as f:
+            options = json.load(f)
+    contigs_add = []
+    if not options['folder']:  # Target is not a folder
+        print('[ERROR] Target is a file not a directory.')
+        print('[DereCo] EXIT')
+    elif not options['finished']:  # Input directory is NOT finished
+        print('[ERROR] Input directory is not finished.')
+        print('[DereCo] run: dereco calculate -i {0} -t [threads]'.format(options['wd']))
+    else:
+        print('[DereCo] {0} is a FINISHED working directory'.format(options['wd']))
+        print('[DereCo] Update contigs (.fa.gz) in {0}'.format(options['target']))
+        print('[DereCo] Finished contigs: {0}'.format(len(options['add'])))
+        contigs_finished = set(options['add'])
+        for item in os.listdir(options['target']):
+            if item.endswith('.fa.gz'):
+                if item not in contigs_finished:
+                    contigs_add.append(options['target'] + item)
+                    print('[DereCo] Add new contig: {0}'.format(item))
+        if len(contigs_add) > 0:
+            print('[DereCo] Added {0} new contig(s)'.format(len(contigs_add)))
+        else:
+            print('[DereCo] No new contigs found in {0}'.format(options['target']))
+
+    # concat new contigs as new small file
+    options['small_file'] = options['wd'] + options['sn'] + '.small.fa'
+    cmd = ['cat']
+    cmd += [' '.join(contigs_add)]
+    cmd += ['| seqtk rename - added_ > ' + options['small_file']]
+    cmd = ' '.join(cmd)
+    print('[SHELL] ' + cmd)
+    os.system(cmd)
+
+    # Set large_file = final
+    options['large_file'] = options['wd'] + options['sn'] + '.large.fa'
+    cmd = ['mv']
+    cmd += [options['final']]
+    cmd += [options['large_file']]
+    cmd = ' '.join(cmd)
+    print('[SHELL] ' + cmd)
+    options['final'] = ''
+    os.system(cmd)
+
+    # Turn off finished flag
+    options['finished'] = False
+    if os.path.isfile(options['wd'] + 'FINISHED'):
+        os.remove(options['wd'] + 'FINISHED')
+
+    # Print calculate command
+    print('[DereCo] Working directory set up ready')
+    print('[DereCo] WD = {0}'.format(options['wd']))
+    print('[DereCo] Large file = {0}'.format(options['large_file']))
+    print('[DereCo] Small file = {0}'.format(options['small_file']))
+    print('[DereCo] NEXT run: dereco calculate -i {0} -t [threads]'.format(options['wd]']))
+
 
 if len(sys.argv[:]) == 1:
     option = ''
@@ -326,13 +404,13 @@ elif option in ('calculate', 'calc'):
         calculate(args.input, args.threads)
 elif option == 'update':
     print('Generate a report')
-    parser = argparse.ArgumentParser(prog='dereco stat')
+    parser = argparse.ArgumentParser(prog='dereco update')
     parser.add_argument('-i', '--input', help='Path to the stat output folder.')
     parser.add_argument('-o', '--output', help='Path to the report file')
     if len(sys.argv[:]) == 2:
         parser.print_help()
     else:
         args = parser.parse_args(sys.argv[2:])
-        stat(args.input, args.output)
+        update(args.input, args.output)
 else:
     print_help()
