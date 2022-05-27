@@ -393,7 +393,7 @@ if option == 'create':
         args = parser.parse_args(sys.argv[2:])
         create(args.input, args.output, args.cutoff, args.minlen)
 elif option in ('calculate', 'calc'):
-    print('Calculate similarity and dereplicate')
+    print('CALCULATE similarity and dereplicate')
     parser = argparse.ArgumentParser(prog='dereco calculate')
     parser.add_argument('-i', '--input', help='Path to the prep output folder.')
     parser.add_argument('-t', '--threads', type=int, help='Numer of threads')
@@ -403,7 +403,7 @@ elif option in ('calculate', 'calc'):
         args = parser.parse_args(sys.argv[2:])
         calculate(args.input, args.threads)
 elif option == 'update':
-    print('Generate a report')
+    print('UPDATE a working directory for new contigs in the target path')
     parser = argparse.ArgumentParser(prog='dereco update')
     parser.add_argument('-i', '--input', help='Path to the stat output folder.')
     parser.add_argument('-o', '--output', help='Path to the report file')
