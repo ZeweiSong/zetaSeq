@@ -108,7 +108,8 @@ def create(args_input, args_output, args_cutoff, args_minlen):
     cmd = ' '.join(cmd)
     print('[SEQTK] ' + cmd)
     os.system(cmd)
-    os.system('rm ' + args_output + 'tmp_cat.fa.gz')  # remove the temp cat file
+    if folder:
+        os.system('rm ' + args_output + 'tmp_cat.fa.gz')  # remove the temp cat file
 
     # Write large and small sequences to the working folder
     print('Length cutoff: {0}'.format(args_cutoff))
@@ -294,14 +295,14 @@ def calculate(args_input, args_threads):
     cmd = ['cat']
     cmd += [args_input + 'dereco_large_vs_large.fa']
     cmd += [args_input + 'dereco_small_vs_small.fa']
-    cmd += ['| seqtk rename - nrc_ >' + args_input + 'dereco_final.fa']
+    cmd += ['| seqtk rename - nrc_ > ' + args_input + 'dereco_final.fa']
     cmd = ' '.join(cmd)
     print('[SHELL] ' + cmd)
     os.system(cmd)
 
     options['final'] = args_input + 'dereco_final.fa'
     options['finished'] = True
-    with open(args_input + 'options.json', 'r') as f:
+    with open(args_input + 'options.json', 'w') as f:
         json.dump(options, f)
 
     if os.path.isfile(args_input + 'dereco_final.fa'):
