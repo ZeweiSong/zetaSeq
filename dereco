@@ -40,6 +40,7 @@ def create(args_input, args_output, args_cutoff, args_minlen):
     print('Dereco: dereplicate a group of contigs')
     folder = False
     fagz = []
+    sn = ''
     if os.path.isfile(args_input):  # Input is a file
         print('Origin file: {0}'.format(args_input))
         if args_input.endswith('.fa') or args_input.endswith('.fa.gz'):
@@ -94,6 +95,8 @@ def create(args_input, args_output, args_cutoff, args_minlen):
         cmd = ' '.join(cmd)
         print('[SHELL] ' + cmd)
         os.system(cmd)
+    else:
+        target_file = args_input
     cmd = ['seqtk seq -L ' + str(args_minlen)]
     cmd += ['-C']
     cmd += [target_file]
