@@ -56,7 +56,7 @@ def create(args_input, args_output, args_cutoff, args_minlen):
     elif os.path.isdir(args_input):  # Input is a folder
         folder = True
         if not args_input.endswith('/'): args_input += '/'
-        sn = args_input.split[:-1].split('/')[-1]
+        sn = args_input[:-1].split('/')[-1]
         print('Origin directory: {0}'.format(args_input))
         # Search in the target folder for all .fa.gz files, .fa will be ignored
         count_fa = 0
@@ -68,6 +68,10 @@ def create(args_input, args_output, args_cutoff, args_minlen):
         if count_fa > 0:
             print('Found {0} .fa files in {1}, but will not add them to the working directory'.format(count_fa,
                                                                                                       args_input))
+        if len(fagz) == 0:
+            print('Found 0 .fa.gz files')
+            print('[DereCo] EXIT')
+            sys.exit()
 
     # Check if the output folder exist
     if not args_output.endswith('/'): args_output += '/'
@@ -318,7 +322,7 @@ def calculate(args_input, args_threads):
     print('Compression rate: {0:.2f}'.format((sum_large + sum_small) / (sum1 + sum3)))
     print('Origin size / Derep size: {0:,} / {1:,}'.format(sum_large + sum_small, sum1 + sum3))
     if options['folder']:
-        print('To update: dereco update -i {0} -t [threads]'.format(options['input']))
+        print('To update: dereco update -i {0} -t [threads]'.format(options['wd']))
 
 
 def update(args_input, args_threads):
@@ -400,7 +404,7 @@ elif option in ('calculate', 'calc'):
     print('CALCULATE similarity and dereplicate')
     parser = argparse.ArgumentParser(prog='dereco calculate')
     parser.add_argument('-i', '--input', help='Path to the prep output folder.')
-    parser.add_argument('-t', '--threads', type=int, help='Numer of threads')
+    parser.add_argument('-t', '--threads', type=int, default=2, help='Numer of threads')
     if len(sys.argv[:]) == 2:
         parser.print_help()
     else:
