@@ -1,7 +1,7 @@
 #! /bin/bash
 
 python zetaseq/test/spawn_test.py
-gzip -d tst_ctg_*.fa
+gzip tst_ctg_*.fa
 mkdir contigs/
 mv tst_ctg_1.fa.gz contigs/
 mv tst_ctg_2.fq.gz contigs/
