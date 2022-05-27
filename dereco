@@ -340,8 +340,8 @@ def update(args_input, args_threads):
     else:
         print('[DereCo] {0} is a FINISHED working directory'.format(options['wd']))
         print('[DereCo] Update contigs (.fa.gz) in {0}'.format(options['target']))
-        print('[DereCo] Finished contigs: {0}'.format(len(options['add'])))
-        contigs_finished = set(options['add'])
+        print('[DereCo] Finished contigs: {0}'.format(len(options['added'])))
+        contigs_finished = set([i.split('/')[-1] for i in options['added']])
         for item in os.listdir(options['target']):
             if item.endswith('.fa.gz'):
                 if item not in contigs_finished:
@@ -351,9 +351,11 @@ def update(args_input, args_threads):
             print('[DereCo] Added {0} new contig(s)'.format(len(contigs_add)))
         else:
             print('[DereCo] No new contigs found in {0}'.format(options['target']))
+            print('[DereCo] EXIT')
+            sys.exit()
 
     # concat new contigs as new small file
-    options['small_file'] = options['wd'] + options['sn'] + '.small.fa'
+    options['small_file'] = options['wd'] + 'contigs.small.fa'
     cmd = ['cat']
     cmd += [' '.join(contigs_add)]
     cmd += ['| seqtk rename - added_ > ' + options['small_file']]
@@ -362,17 +364,19 @@ def update(args_input, args_threads):
     os.system(cmd)
 
     # Set large_file = final
-    options['large_file'] = options['wd'] + options['sn'] + '.large.fa'
+    options['large_file'] = options['wd'] + 'contigs.large.fa'
     cmd = ['mv']
     cmd += [options['final']]
     cmd += [options['large_file']]
     cmd = ' '.join(cmd)
     print('[SHELL] ' + cmd)
+    shutil.move(options['final'], options['large_file'])
     options['final'] = ''
-    os.system(cmd)
-
+    
     # Turn off finished flag
     options['finished'] = False
+    with open(args_input + 'options.json', 'w') as f:
+        json.dump(options, f)
     if os.path.isfile(options['wd'] + 'FINISHED'):
         os.remove(options['wd'] + 'FINISHED')
 
@@ -381,7 +385,7 @@ def update(args_input, args_threads):
     print('[DereCo] WD = {0}'.format(options['wd']))
     print('[DereCo] Large file = {0}'.format(options['large_file']))
     print('[DereCo] Small file = {0}'.format(options['small_file']))
-    print('[DereCo] NEXT run: dereco calculate -i {0} -t [threads]'.format(options['wd]']))
+    print('[DereCo] NEXT run: dereco calculate -i {0} -t [threads]'.format(options['wd']))
 
 
 if len(sys.argv[:]) == 1:
