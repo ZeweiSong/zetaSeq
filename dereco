@@ -337,7 +337,13 @@ def update(args_input, args_threads):
     print('[SHELL] ' + cmd)
     shutil.move(options['final'], options['large_file'])
     options['final'] = ''
-    
+   
+    # Write a new FLOW to update
+    with open(args_input + 'FLOW', 'w') as f:
+        f.write('{0}\t{1}\n'.format(options['small_file'], options['small_file']))
+        f.write('{0}\t{1}\n'.format(options['small_file'], options['large_file']))
+        f.write('{0}\t{1}\n'.format(options['large_file'], options['small_file']))
+
     # Turn off finished flag
     options['finished'] = False
     with open(args_input + 'options.json', 'w') as f:
@@ -350,6 +356,7 @@ def update(args_input, args_threads):
     print('[DereCo] WD = {0}'.format(options['wd']))
     print('[DereCo] Large file = {0}'.format(options['large_file']))
     print('[DereCo] Small file = {0}'.format(options['small_file']))
+    print('[DereCo] New FLOW is ready')
     print('[DereCo] NEXT run: dereco calculate -i {0} -t [threads]'.format(options['wd']))
 
 
