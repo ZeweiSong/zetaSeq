@@ -181,29 +181,31 @@ def dereplicate(query, ref, threads):
     cmd += ['-t ' + str(threads)]
     cmd += [ref]
     cmd += [query]
-    cmd += ['-o ' + args_input + '_tmp.paf']
+    cmd += ['-o ' + '_tmp.paf']
     cmd += ['2> /dev/null']
     cmd = ' '.join(cmd)
     print('[MINIMAP2] ' + cmd)
     os.system(cmd)
 
     # dereplicate query against ref
-    removal = derep_paf(args_input + '_tmp.paf')
+    removal = derep_paf('_tmp.paf')
     keep = [i[0] for i in seqIO.sequence(query) if i[0] not in removal]
     print('[DereCo] Removing {0} sequences ...'.format(len(removal)))
-    with open(args_input + '_kplist', 'w') as f:
+    with open('_kplist', 'w') as f:
         f.write('{0}\n'.format('\n'.join(keep)))
     cmd = ['seqtk subseq']
     cmd += [query]
-    cmd += [args_input + '_kplist']
-    cmd += ['> ' + args_input + '_query.fa']
+    cmd += ['_kplist']
+    cmd += ['> ' + '_query.fa']
     cmd = ' '.join(cmd)
     print('[SEQTK] ' + cmd)
     os.system(cmd)
 
     # replace old query with new query
     os.remove(query)
-    shutil.move(args_input + '_query.fa', query)
+    shutil.move('_query.fa', query)
+    os.remove('_kplist')
+    os.remove('_tmp.paf')
     print('[DereCo] {0} is dereplicated'.format(query))
 
     return None
@@ -222,114 +224,51 @@ def calculate(args_input, args_threads):
     if not os.path.isfile(args_input + 'options.json'):
         print('[ERROR] Did not find options.json, use "dereco create" to set up the working directory.')
         sys.exit()
+    elif not os.path.isfile(args_input + 'FLOW'):
+        print('[ERROR] Did not find FLOW, use "dereco create" to set up the working directory.')
     else:
         with open(args_input + 'options.json', 'r') as f:
             options = json.load(f)
-            options['threads'] = int(args_threads)
-            file_large = options['large_file']
-            file_small = options['small_file']
             if options['finished']:
-                print('[ERROR] Directory {0} is marked as FINISHED.'.format(args_input))
-                print('[DereCo] EXIT')
+                print('[DeroCo] This directory is marked as FINISHED')
                 sys.exit()
-    print('Large file: {0}'.format(file_large))
-    print('Small file: {0}'.format(file_small))
+            else:
+                flow = []
+                with open(args_input + 'FLOW', 'r') as f:
+                    for line in f:
+                        line = line.strip('\n').split('\t')
+                        flow.append(tuple(line))
+
     print('Cutoff: {0}'.format(options['cutoff']))
     print('Minimum length: {0}'.format(options['minlen']))
-    sum_large, count_large = get_size_count(file_large)
-    sum_small, count_small = get_size_count(file_small)
-
-    # minimap2 asm5 large large
-    cmd = ['minimap2']
-    cmd += ['-x asm5']
-    cmd += ['-t ' + str(args_threads)]
-    cmd += [file_large]
-    cmd += [file_large]
-    cmd += ['-o ' + args_input + 'align_large_vs_large.paf']
-    cmd += ['2> /dev/null']
-    cmd = ' '.join(cmd)
-    print('[MINIMAP2] ' + cmd)
-    os.system(cmd)
-
-    # dereplicate large vs large
-    removal = derep_paf(args_input + 'align_large_vs_large.paf')
-    keep = [i[0] for i in seqIO.sequence(file_large) if i[0] not in removal]
-    print('[DereCo] Removing {0} sequences ...'.format(len(removal)))
-    with open(args_input + 'kplist', 'w') as f:
-        f.write('{0}\n'.format('\n'.join(keep)))
-    cmd = ['seqtk subseq']
-    cmd += [file_large]
-    cmd += [args_input + 'kplist']
-    cmd += ['> ' + args_input + 'dereco_large_vs_large.fa']
-    cmd = ' '.join(cmd)
-    print('[SEQTK] ' + cmd)
-    os.system(cmd)
-    sum1, c1 = get_size_count(args_input + 'dereco_large_vs_large.fa')
-    print('[DereCo] Dereplicated large file: {0:,} -> {1:,} (bps) / {2:,} -> {3:,} (count)'.format(sum_large, sum1,
-                                                                                                   count_large, c1))
-
-    # minimap2 asm5 large small
-    cmd = ['minimap2']
-    cmd += ['-x asm5']
-    cmd += ['-t ' + str(args_threads)]
-    cmd += [args_input + 'dereco_large_vs_large.fa']
-    cmd += [file_small]
-    cmd += ['-o ' + args_input + 'align_small_vs_large.paf']
-    cmd += ['2> /dev/null']
-    cmd = ' '.join(cmd)
-    print('[MINIMAP2] ' + cmd)
-    os.system(cmd)
-
-    # dereplicate small vs large
-    removal = derep_paf(args_input + 'align_small_vs_large.paf')
-    keep = [i[0] for i in seqIO.sequence(file_small) if i[0] not in removal]
-    print('[DereCo] Removing {0} sequences ...'.format(len(removal)))
-    with open(args_input + 'kplist', 'w') as f:
-        f.write('{0}\n'.format('\n'.join(keep)))
-    cmd = ['seqtk subseq']
-    cmd += [file_small]
-    cmd += [args_input + 'kplist']
-    cmd += ['> ' + args_input + 'dereco_small_vs_large.fa']
-    cmd = ' '.join(cmd)
-    print('[SEQTK] ' + cmd)
-    os.system(cmd)
-    sum2, c2 = get_size_count(args_input + 'dereco_small_vs_large.fa')
-    print('[DereCo] Dereplicated small file: {0:,} -> {1:,} (bps) / {2:,} -> {3:,} (count)'.format(sum_small, sum2,
-                                                                                                   count_small, c2))
-
-    # minimap2 asm5 small vs small
-    cmd = ['minimap2']
-    cmd += ['-x asm5']
-    cmd += ['-t ' + str(args_threads)]
-    cmd += [args_input + 'dereco_small_vs_large.fa']
-    cmd += [args_input + 'dereco_small_vs_large.fa']
-    cmd += ['-o ' + args_input + 'align_small_vs_small.paf']
-    cmd += ['2> /dev/null']
-    cmd = ' '.join(cmd)
-    print('[MINIMAP2] ' + cmd)
-    os.system(cmd)
-
-    # dereplicate small vs small
-    removal = derep_paf(args_input + 'align_small_vs_small.paf')
-    keep = [i[0] for i in seqIO.sequence(args_input + 'dereco_small_vs_large.fa') if i[0] not in removal]
-    print('[DereCo] Removing {0} sequences ...'.format(len(removal)))
-    with open(args_input + 'kplist', 'w') as f:
-        f.write('{0}\n'.format('\n'.join(keep)))
-    cmd = ['seqtk subseq']
-    cmd += [args_input + 'dereco_small_vs_large.fa']
-    cmd += [args_input + 'kplist']
-    cmd += ['> ' + args_input + 'dereco_small_vs_small.fa']
-    cmd = ' '.join(cmd)
-    print('[SEQTK] ' + cmd)
-    os.system(cmd)
-    sum3, c3 = get_size_count(args_input + 'dereco_small_vs_small.fa')
-    print('[DereCo] Dereplicated small file: {0:,} -> {1:,} -> {2:,} (bps) / {3:,} -> {4:,} -> {5:,} (count)'.format(
-        sum_small, sum2, sum3, count_small, c2, c3))
+   
+    sum0 = [0,0]
+    c0 = [0, 0]
+    sum0[0], c0[0] = get_size_count(options['large_file'])
+    sum0[1], c0[1] = get_size_count(options['small_file']) 
+    print('[DereCo] FLOW started:')
+    for item in flow:
+        query = item[0]
+        ref = item[1]
+        if not os.path.isfile(query):
+            print('[ERROR] {0} is missing'.format(query))
+            print('[DereCo] EXIT')
+            sys.exit()
+        elif not os.path.isfile(ref):
+            print('[ERROR] {0} is missing'.format(ref))
+            print('[DereCo] EXIT')
+            sys.exit()
+        print('[DereCo] FLOW: {0} -> {1}'.format(query, ref))
+        sum_ref, count_ref = get_size_count(ref)
+        sum_query, count_query = get_size_count(query)
+        dereplicate(query, ref, args_threads)
+        sum1, c1 = get_size_count(query)
+        print('[DereCo] Dereplicated {4}: {0:,} -> {1:,} (bps) / {2:,} -> {3:,} (count)'.format(sum_query, sum1, count_query, c1, query))
 
     # concat all and rename with prefix nrc_ aka Non-redundant contigs
     cmd = ['cat']
-    cmd += [args_input + 'dereco_large_vs_large.fa']
-    cmd += [args_input + 'dereco_small_vs_small.fa']
+    cmd += [options['large_file']]
+    cmd += [options['small_file']]
     cmd += ['| seqtk rename - nrc_ > ' + args_input + 'dereco_final.fa']
     cmd = ' '.join(cmd)
     print('[SHELL] ' + cmd)
@@ -342,16 +281,11 @@ def calculate(args_input, args_threads):
 
     if os.path.isfile(args_input + 'dereco_final.fa'):
         os.system('touch ' + args_input + 'FINISHED')
-
+    
+    sum1, c1 = get_size_count(args_input + 'dereco_final.fa')
     print('\n\t---Report---')
-    print('Origin large: {0:,} (bps) / {1:,} (count)'.format(sum_large, count_large))
-    print('Origin small: {0:,} (bps) / {1:,} (count)'.format(sum_small, count_small))
-    print('Origin all: {0:,} (bps) / {1:,} (count)'.format(sum_large + sum_small, count_large + count_small))
-    print('Derep large: {0:,} (bps) / {1:,} (count)'.format(sum1, c1))
-    print('Derep small: {0:,} (bps) / {1:,} (count)'.format(sum3, c3))
-    print('Derep all: {0:,} (bps) / {1:,} (count)'.format(sum1 + sum3, c1 + c3))
-    print('Compression rate: {0:.2f}'.format((sum_large + sum_small) / (sum1 + sum3)))
-    print('Origin size / Derep size: {0:,} / {1:,}'.format(sum_large + sum_small, sum1 + sum3))
+    print('Compression rate: {0:.2f}'.format(sum(sum0) / (sum1)))
+    print('Origin size / Derep size: {0:,} / {1:,}'.format(sum(sum0), sum1))
     if options['folder']:
         print('To update: dereco update -i {0} -t [threads]'.format(options['wd']))
 
