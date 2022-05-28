@@ -30,6 +30,7 @@ def print_help():
     print('create     CREATE a working folder from a fromile or files in a directory.')
     print('calculate  CALCULATE similarity and remove redundant sequences.')
     print('update     UPDATE a working directory with new files in the target path.')
+    print('status     Print out the STATUS of a working directory.')
     print('--------------------')
     print('Song, Zewei')
     print('songzewei@genomics.cn')
@@ -360,6 +361,44 @@ def update(args_input, args_threads):
     print('[DereCo] NEXT run: dereco calculate -i {0} -t [threads]'.format(options['wd']))
 
 
+def status(args_input):
+    print('[DereCo] Checking {0}'.format(args_input))
+    if not args_input.endswith('/'): args_input += '/'
+    if not os.path.isdir(args_input):
+        print('[ERROR] {0} not exist')
+        print('[DereCo] EXIT')
+        sys.exit()
+    else:
+        if not os.path.isfile(args_input + 'options.json'):
+            print('[ERROR] options.json not exist, {0} is not a working directory'.format(args_input))
+            print('[DereCo] EXIT')
+            sys.exit()
+        else:
+            with open(args_input + 'options.json', 'r') as f:
+                options = json.load(f)
+            print('[DereCo] Loading options.json')
+    if options['finished']:
+        print('[DereCo] Project is FINISHED')
+        print('[DereCo] Project path: {0}'.format(options['wd']))
+        print('[DereCo] Non-redundant contigs set in {0}'.options['final'])
+        print('[DereCo] Compressed from {0} files'.format(len(options['added'])))
+        print('[DereCo] Cutoff = {0:,}'.format(options['cutoff']))
+        print('[DereCo] Minimum length = {0:,}'.format(options['minlen']))
+        print('[DereCo] Path to update: {0}'.options['target'])
+    else:
+        print('[DereCo] Project is NOT finished')
+        print('[DereCo] Project path: {0}'.format(options['wd']))
+        print('[DereCo] Cutoff = {0:,}'.format(options['cutoff']))
+        print('[DereCo] Minimum length = {0:,}'.format(options['minlen']))
+        print('[DereCo] Source of contigs: {0}'.format(options['target']))
+        print('[DereCo] Added {0} files'.format(len(options['added'])))
+    with open(args_input + 'FLOW', 'r') as f:
+        print('[DereCo] FLOW')
+        for line in f:
+            line = line.strip('\n').split('\t')
+            print('[DereCo] FLOW: {0} -> {1}'.format(line[0], line[1]))
+
+
 if len(sys.argv[:]) == 1:
     option = ''
 else:
@@ -396,5 +435,14 @@ elif option == 'update':
     else:
         args = parser.parse_args(sys.argv[2:])
         update(args.input, args.output)
+elif option in ('status', 'stat'):
+    print('STATUS of a working directory')
+    parser = argparse.ArgumentParser(prog='dereco status')
+    parser.add_argument('-i', '--input', help='Path to the working directory.')
+    if len(sys.argv[:]) == 2:
+        parser.print_help()
+    else:
+        args = parser.parse_args(sys.argv[2:])
+        status(args.input)
 else:
     print_help()
