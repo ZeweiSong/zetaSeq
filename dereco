@@ -140,6 +140,11 @@ def create(args_input, args_output, args_cutoff, args_minlen):
         print('[DereCo] {0} removed'.format(args_output))
         print('[DereCo] EXIT')
         sys.exit()
+    else:
+        with open(args_output + 'FLOW'):
+            f.write('{0}\t{1}\n'.format(file_large, file_large))
+            f.write('{0}\t{1}\n'.format(file_small, file_large))
+            f.write('{0}\t{1}\n'.format(file_small, file_small))
 
         # Save the options.json file
     with open(args_output + 'options.json', 'w') as f:
@@ -148,6 +153,7 @@ def create(args_input, args_output, args_cutoff, args_minlen):
     print('[DereCo] Generated the LARGE file: {0}'.format(file_large))
     print('[DereCo] Generated the SMALL file: {0}'.format(file_small))
     print('[DereCo] Generated options.jaon')
+    print('[DereCo] Generated FLOW')
     print('[DereCo] Next run: dereco calculate -i {0} -t [threads]'.format(args_output))
 
     return None
