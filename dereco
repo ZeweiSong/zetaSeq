@@ -173,15 +173,40 @@ def derep_paf(input_paf):
         removal = set(removal)
     return removal
 
+# Dereplicate a query file against the ref file
+def dereplicate(query, ref, threads):
+    # minimap2 asm5 ref query
+    cmd = ['minimap2']
+    cmd += ['-x asm5']
+    cmd += ['-t ' + str(threads)]
+    cmd += [ref]
+    cmd += [query]
+    cmd += ['-o ' + args_input + '_tmp.paf']
+    cmd += ['2> /dev/null']
+    cmd = ' '.join(cmd)
+    print('[MINIMAP2] ' + cmd)
+    os.system(cmd)
 
-# reture a seq list by removing sequencs in the removal_list
-def remove_seqs(input_seqs, removal_list):
-    result = []
-    for item in seqIO.sequence(input_seqs):
-        if item[0] not in removal_list:
-            result.append(item)
-    return result
+    # dereplicate query against ref
+    removal = derep_paf(args_input + '_tmp.paf')
+    keep = [i[0] for i in seqIO.sequence(query) if i[0] not in removal]
+    print('[DereCo] Removing {0} sequences ...'.format(len(removal)))
+    with open(args_input + '_kplist', 'w') as f:
+        f.write('{0}\n'.format('\n'.join(keep)))
+    cmd = ['seqtk subseq']
+    cmd += [query]
+    cmd += [args_input + '_kplist']
+    cmd += ['> ' + args_input + '_query.fa']
+    cmd = ' '.join(cmd)
+    print('[SEQTK] ' + cmd)
+    os.system(cmd)
 
+    # replace old query with new query
+    os.remove(query)
+    shutil.move(args_input + '_query.fa', query)
+    print('[DereCo] {0} is dereplicated'.format(query))
+
+    return None
 
 def get_size_count(input_seqs):
     size = 0
