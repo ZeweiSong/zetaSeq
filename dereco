@@ -141,7 +141,7 @@ def create(args_input, args_output, args_cutoff, args_minlen):
         print('[DereCo] EXIT')
         sys.exit()
     else:
-        with open(args_output + 'FLOW'):
+        with open(args_output + 'FLOW', 'w') as f:
             f.write('{0}\t{1}\n'.format(file_large, file_large))
             f.write('{0}\t{1}\n'.format(file_small, file_large))
             f.write('{0}\t{1}\n'.format(file_small, file_small))
