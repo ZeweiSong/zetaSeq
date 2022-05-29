@@ -380,11 +380,11 @@ def status(args_input):
     if options['finished']:
         print('[DereCo] Project is FINISHED')
         print('[DereCo] Project path: {0}'.format(options['wd']))
-        print('[DereCo] Non-redundant contigs set in {0}'.options['final'])
+        print('[DereCo] Non-redundant contigs set in {0}'.format(options['final']))
         print('[DereCo] Compressed from {0} files'.format(len(options['added'])))
         print('[DereCo] Cutoff = {0:,}'.format(options['cutoff']))
         print('[DereCo] Minimum length = {0:,}'.format(options['minlen']))
-        print('[DereCo] Path to update: {0}'.options['target'])
+        print('[DereCo] Path to update: {0}'.format(options['target']))
     else:
         print('[DereCo] Project is NOT finished')
         print('[DereCo] Project path: {0}'.format(options['wd']))
