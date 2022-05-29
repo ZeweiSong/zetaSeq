@@ -93,7 +93,10 @@ def create(args_input, args_output, args_cutoff, args_minlen):
         cmd += ['> ' + args_output + '_tmp.cat.fa.gz']
         target_file = args_output + '_tmp.cat.fa.gz'
         cmd = ' '.join(cmd)
-        print('[SHELL] ' + cmd)
+        if len(fagz) >= 10:
+            print('[SHELL ] cat ' + ' '.join(fagz[:8]) + ' ... ' + fagz[10] + ' > ' + args_output + '_tmp.cat.fa.gz'] 
+        else:
+            print('[SHELL] ' + cmd)
         os.system(cmd)
     else:
         target_file = args_input
