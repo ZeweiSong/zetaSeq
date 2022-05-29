@@ -291,7 +291,7 @@ def calculate(args_input, args_threads):
         print('To update: dereco update -i {0} -t [threads]'.format(options['wd']))
 
 
-def update(args_input, args_threads):
+def update(args_input):
     # Check options.json
     if os.path.isfile(args_input + 'options.json'):
         with open(args_input + 'options.json', 'r') as f:
@@ -324,7 +324,7 @@ def update(args_input, args_threads):
     options['small_file'] = options['wd'] + 'contigs.small.fa'
     cmd = ['cat']
     cmd += [' '.join(contigs_add)]
-    cmd += ['| seqtk rename - added_ > ' + options['small_file']]
+    cmd += ['| seqtk seq -L ' + options['minlen'] + ' | seqtk rename - added_ > ' + options['small_file']]
     cmd = ' '.join(cmd)
     print('[SHELL] ' + cmd)
     os.system(cmd)
@@ -429,12 +429,11 @@ elif option == 'update':
     print('UPDATE a working directory for new contigs in the target path')
     parser = argparse.ArgumentParser(prog='dereco update')
     parser.add_argument('-i', '--input', help='Path to the stat output folder.')
-    parser.add_argument('-o', '--output', help='Path to the report file')
     if len(sys.argv[:]) == 2:
         parser.print_help()
     else:
         args = parser.parse_args(sys.argv[2:])
-        update(args.input, args.output)
+        update(args.input)
 elif option in ('status', 'stat'):
     print('STATUS of a working directory')
     parser = argparse.ArgumentParser(prog='dereco status')
