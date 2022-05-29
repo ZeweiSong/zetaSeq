@@ -45,19 +45,14 @@ def create(args_input, args_output, args_cutoff, args_minlen):
     if os.path.isfile(args_input):  # Input is a file
         print('Origin file: {0}'.format(args_input))
         if args_input.endswith('.fa') or args_input.endswith('.fa.gz'):
-            if args_input.endswith('.fa'):
-                sn = args_input.split('/')[-1][:-3]
-            else:
-                sn = args_input.split('/')[-1][:-6]
+            pass
         else:
             print('[ERROR] The input file has to be .fa or .fa.gz')
             sys.exit()
-        print('File header: {0}'.format(sn))
         target_file = args_input
     elif os.path.isdir(args_input):  # Input is a folder
         folder = True
         if not args_input.endswith('/'): args_input += '/'
-        sn = args_input[:-1].split('/')[-1]
         print('Origin directory: {0}'.format(args_input))
         # Search in the target folder for all .fa.gz files, .fa will be ignored
         count_fa = 0
@@ -87,7 +82,7 @@ def create(args_input, args_output, args_cutoff, args_minlen):
     options = {'cutoff': args_cutoff, 'minlen': args_minlen,
                'target': args_input, 'wd': args_output,
                'folder': folder, 'final': '', 'finished': False,
-               'threads': 1, 'added': [], 'sn': sn}
+               'threads': 1, 'added': []}
     if folder:
         options['added'] = fagz
 
@@ -95,8 +90,8 @@ def create(args_input, args_output, args_cutoff, args_minlen):
     if folder:  # Target is a folder, will concat all its .fa.gz files first
         cmd = ['cat']
         cmd += [' '.join(fagz)]
-        cmd += ['> ' + args_output + 'tmp_cat.fa.gz']
-        target_file = args_output + 'tmp_cat.fa.gz'
+        cmd += ['> ' + args_output + '_tmp.cat.fa.gz']
+        target_file = args_output + '_tmp.cat.fa.gz'
         cmd = ' '.join(cmd)
         print('[SHELL] ' + cmd)
         os.system(cmd)
@@ -109,22 +104,22 @@ def create(args_input, args_output, args_cutoff, args_minlen):
     cmd += ['seqtk rename -']
     cmd += ['contigs_']
     cmd += ['>']
-    cmd += [args_output + sn + '.renamed.fa']
+    cmd += [args_output + '_tmp.cat.renamed.fa']
     cmd = ' '.join(cmd)
     print('[SEQTK] ' + cmd)
     os.system(cmd)
     if folder:
-        os.system('rm ' + args_output + 'tmp_cat.fa.gz')  # remove the temp cat file
+        os.system('rm ' + args_output + '_tmp.cat.fa.gz')  # remove the temp cat file
 
     # Write large and small sequences to the working folder
     print('Length cutoff: {0}'.format(args_cutoff))
-    file_large = args_output + sn + '.large.fa'
-    file_small = args_output + sn + '.small.fa'
+    file_large = args_output + 'contigs.large.fa'
+    file_small = args_output + 'contigs.small.fa'
     options['large_file'] = file_large
     options['small_file'] = file_small
 
     cmd = ['vsearch --fastx_filter']
-    cmd += [args_output + sn + '.renamed.fa']
+    cmd += [args_output + '_tmp.cat.renamed.fa']
     cmd += ['--fastq_minlen ' + str(args_cutoff)]
     cmd += ['--fastaout ' + file_large]
     cmd += ['--fastaout_discarded ' + file_small]
@@ -133,7 +128,7 @@ def create(args_input, args_output, args_cutoff, args_minlen):
     cmd = ' '.join(cmd)
     print('[VSEARCH] ' + cmd)
     os.system(cmd)
-    os.remove(args_output + sn + '.renamed.fa')
+    os.remove(args_output + '_tmp.cat.renamed.fa')
 
     if os.stat(file_large).st_size == 0:  # Check if the large file is empty
         print('[DereCo] The large file is empty, you may want to lower the cutoff.')
@@ -324,7 +319,7 @@ def update(args_input):
     options['small_file'] = options['wd'] + 'contigs.small.fa'
     cmd = ['cat']
     cmd += [' '.join(contigs_add)]
-    cmd += ['| seqtk seq -L ' + options['minlen'] + ' | seqtk rename - added_ > ' + options['small_file']]
+    cmd += ['| seqtk seq -L ' + str(options['minlen']) + ' | seqtk rename - added_ > ' + options['small_file']]
     cmd = ' '.join(cmd)
     print('[SHELL] ' + cmd)
     os.system(cmd)
