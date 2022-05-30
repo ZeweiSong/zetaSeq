@@ -313,6 +313,7 @@ def update(args_input):
                     print('[DereCo] Add new contig: {0}'.format(item))
         if len(contigs_add) > 0:
             print('[DereCo] Added {0} new contig(s)'.format(len(contigs_add)))
+            options['added'] += contigs_add
         else:
             print('[DereCo] No new contigs found in {0}'.format(options['target']))
             print('[DereCo] EXIT')
