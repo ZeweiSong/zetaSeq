@@ -94,14 +94,14 @@ def create(args_input, args_output, args_cutoff, args_minlen):
         target_file = args_output + '_tmp.cat.fa.gz'
         cmd = ' '.join(cmd)
         if len(fagz) >= 10:
-            print('[SHELL ] cat ' + ' '.join(fagz[:8]) + ' ... ' + fagz[10] + ' > ' + args_output + '_tmp.cat.fa.gz'] 
+            print('[SHELL ] cat ' + ' '.join(fagz[:8]) + ' ... ' + fagz[10] + ' > ' + args_output + '_tmp.cat.fa.gz') 
         else:
             print('[SHELL] ' + cmd)
         os.system(cmd)
     else:
         target_file = args_input
     cmd = ['seqtk seq -L ' + str(args_minlen)]
-    cmd += ['-C']
+    cmd += ['-C'] # -C is requied to remove all comments
     cmd += [target_file]
     cmd += ['|']
     cmd += ['seqtk rename -']
@@ -258,7 +258,7 @@ def calculate(args_input, args_threads):
             print('[DereCo] EXIT')
             sys.exit()
         print('[DereCo] FLOW: {0} -> {1}'.format(query, ref))
-        sum_ref, count_ref = get_size_count(ref)
+        # sum_ref, count_ref = get_size_count(ref)
         sum_query, count_query = get_size_count(query)
         dereplicate(query, ref, args_threads)
         sum1, c1 = get_size_count(query)
@@ -322,7 +322,7 @@ def update(args_input):
     options['small_file'] = options['wd'] + 'contigs.small.fa'
     cmd = ['cat']
     cmd += [' '.join(contigs_add)]
-    cmd += ['| seqtk seq -L ' + str(options['minlen']) + ' | seqtk rename - added_ > ' + options['small_file']]
+    cmd += ['| seqtk seq -L ' + str(options['minlen']) + ' -C | seqtk rename - added_ > ' + options['small_file']] # need to use seqtk seq -C to remove comments in labels
     cmd = ' '.join(cmd)
     print('[SHELL] ' + cmd)
     os.system(cmd)
