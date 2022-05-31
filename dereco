@@ -84,7 +84,8 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
                'folder': folder, 'final': '', 'finished': False,
                'threads': 1, 'added': [], 'cigar': False,
                'origin_size': 0, 'derep_size': 0,
-               'sig': args_sourmash}
+               'sig': args_sourmash,
+               'big_head_son':'', 'small_head_dad':''}
     if folder:
         options['added'] = fagz
 
@@ -132,8 +133,8 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
     print('Length cutoff: {0}'.format(args_cutoff))
     file_large = args_output + 'contigs.large.fa'
     file_small = args_output + 'contigs.small.fa'
-    options['large_file'] = file_large
-    options['small_file'] = file_small
+    options['big_head_son'] = file_large
+    options['small_head_dad'] = file_small
 
     cmd = ['vsearch --fastx_filter']
     cmd += [args_output + '_tmp.cat.renamed.fa']
@@ -263,9 +264,9 @@ def devour(args_input, args_threads, args_offset, args_cigar):
 
     sum0 = [0,0]
     c0 = [0, 0]
-    sum0[0], c0[0] = get_size_count(options['large_file'])
+    sum0[0], c0[0] = get_size_count(options['big_head_son'])
     try:
-        sum0[1], c0[1] = get_size_count(options['small_file'])
+        sum0[1], c0[1] = get_size_count(options['small_head_dad'])
     except IndexError:
         sum0[1], c0[1] = 0, 0
     
@@ -289,8 +290,8 @@ def devour(args_input, args_threads, args_offset, args_cigar):
 
     # concat all and rename with prefix nrc_ aka Non-redundant contigs
     cmd = ['cat']
-    cmd += [options['large_file']]
-    cmd += [options['small_file']]
+    cmd += [options['big_head_son']]
+    cmd += [options['small_head_dad']]
     cmd += ['| seqtk rename - nrc_ > ' + args_input + 'dereco_final.fa']
     cmd = ' '.join(cmd)
     print('[SHELL] ' + cmd)
@@ -301,8 +302,8 @@ def devour(args_input, args_threads, args_offset, args_cigar):
 
     if os.path.isfile(args_input + 'dereco_final.fa'):
         os.system('touch ' + args_input + 'FINISHED')
-        os.remove(options['large_file'])
-        os.remvoe(options['small_file'])
+        os.remove(options['big_head_son'])
+        os.remvoe(options['small_head_dad'])
     
     sum1, c1 = get_size_count(args_input + 'dereco_final.fa')
     print('\n\t---Report---')
@@ -349,29 +350,29 @@ def update(args_input):
             sys.exit()
 
     # concat new contigs as new small file
-    options['small_file'] = options['wd'] + 'contigs.small.fa'
+    options['small_head_dad'] = options['wd'] + 'contigs.small.fa'
     cmd = ['cat']
     cmd += [' '.join(contigs_add)]
-    cmd += ['| seqtk seq -L ' + str(options['minlen']) + ' -C | seqtk rename - added_ > ' + options['small_file']] # need to use seqtk seq -C to remove comments in labels
+    cmd += ['| seqtk seq -L ' + str(options['minlen']) + ' -C | seqtk rename - added_ > ' + options['small_head_dad']] # need to use seqtk seq -C to remove comments in labels
     cmd = ' '.join(cmd)
     print('[SHELL] ' + cmd)
     os.system(cmd)
 
     # Set large_file = final
-    options['large_file'] = options['wd'] + 'contigs.large.fa'
+    options['big_head_son'] = options['wd'] + 'contigs.large.fa'
     cmd = ['mv']
     cmd += [options['final']]
-    cmd += [options['large_file']]
+    cmd += [options['big_head_son']]
     cmd = ' '.join(cmd)
     print('[SHELL] ' + cmd)
-    shutil.move(options['final'], options['large_file'])
+    shutil.move(options['final'], options['big_head_son'])
     options['final'] = ''
    
     # Write a new FLOW to update
     with open(args_input + 'FLOW', 'w') as f:
-        f.write('{0}\t{1}\n'.format(options['small_file'], options['small_file']))
-        f.write('{0}\t{1}\n'.format(options['small_file'], options['large_file']))
-        f.write('{0}\t{1}\n'.format(options['large_file'], options['small_file']))
+        f.write('{0}\t{1}\n'.format(options['small_head_dad'], options['small_head_dad']))
+        f.write('{0}\t{1}\n'.format(options['small_head_dad'], options['big_head_son']))
+        f.write('{0}\t{1}\n'.format(options['big_head_son'], options['small_head_dad']))
 
     # Turn off finished flag
     options['finished'] = False
@@ -383,8 +384,8 @@ def update(args_input):
     # Print calculate command
     print('[DereCo] Working directory set up ready')
     print('[DereCo] WD = {0}'.format(options['wd']))
-    print('[DereCo] Large file = {0}'.format(options['large_file']))
-    print('[DereCo] Small file = {0}'.format(options['small_file']))
+    print('[DereCo] Large file = {0}'.format(options['big_head_son']))
+    print('[DereCo] Small file = {0}'.format(options['small_head_dad']))
     print('[DereCo] New FLOW is ready')
     print('[DereCo] NEXT run: dereco calculate -i {0} -t [threads]'.format(options['wd']))
 
