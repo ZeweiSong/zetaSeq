@@ -201,7 +201,7 @@ def derep_paf(input_paf, offset):
                 ident = float(int(line[10]) / int(line[9]))  # This is the identity (similarity) of the alignment
                 match = float(int(line[10]) / (int(line[1]) - offset))  # This is the percent of length matched on query
                 if ident >= 0.99 and match >= 0.97:
-                    removal.append(line[0])
+                    removal.append((line[0], int(line[1])))
         removal = set(removal)
     return removal
 
@@ -222,8 +222,17 @@ def dereplicate(query, ref, threads, offset, cigar):
 
     # dereplicate query against ref
     removal = derep_paf('_tmp.paf', offset)
-    keep = [i[0] for i in seqIO.sequence(query) if i[0] not in removal]
-    print('[DereCo] Removing {0} sequences ...'.format(len(removal)))
+    if len(removal) > 0:
+        rm_names = set([x[0] for x in removal])
+        rm_bps = sum([x[1] for x in removal])
+        rm_max = max([x[1] for x in removal])
+        rm_min = min([x[1] for x in removal])
+        rm_ave = rm_bps / len(rm_names)
+    else:
+        rm_names = []
+        rm_bps, rm_max, rm_min, rm_ave = 0, 0, 0, 0
+    keep = [i[0] for i in seqIO.sequence(query) if i[0] not in rm_names]
+    print('[DereCo] Removing {0:,} sequences: {1:,} bps, {2:,} / seq, MAX = {3:,}, MIN = {4:,}'.format(len(removal), rm_bps, rm_ave, rm_max, rm_min))
     with open('_kplist', 'w') as f:
         f.write('{0}\n'.format('\n'.join(keep)))
     cmd = ['seqtk subseq']
