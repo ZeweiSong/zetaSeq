@@ -87,6 +87,9 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
                'sig': args_sourmash,
                'big_head_son':'', 'small_head_dad':''}
     if folder:
+        with open(args_output + '.contigs', 'w') as f:
+            for item in fagz:
+               f.write('{0}\n'.format(item))
         options['added'] = fagz
 
     # Rename the sequence names to avoid duplicated label
@@ -306,8 +309,12 @@ def devour(args_input, args_threads, args_offset, args_cigar):
         os.remvoe(options['small_head_dad'])
     
     sum1, c1 = get_size_count(args_input + 'dereco_final.fa')
+    count = 0
+    with open(args_input + '.contigs', 'r') as f:
+        for line in f:
+            count += 1
     print('\n\t---Report---')
-    print('Number of contigs: {0}'.format(len(options['added'])))
+    print('Number of contigs: {0}'.format(count))
     print('Compression rate: {0:.2f}'.format(sum(sum0) / (sum1)))
     print('Origin size / Derep size: {0:,} / {1:,}'.format(sum(sum0), sum1))
     options['origin_size'] = sum(sum0)
@@ -324,6 +331,12 @@ def update(args_input):
     if os.path.isfile(args_input + 'options.json'):
         with open(args_input + 'options.json', 'r') as f:
             options = json.load(f)
+    count = 0
+    contigs_finished
+    with open(args_input + '.contigs', 'r') as f:
+        for line in f:
+            contigs_finished.append(line.strip('\n'))
+            count += 1
     contigs_add = []
     if not options['folder']:  # Target is not a folder
         print('[ERROR] Target is a file not a directory.')
@@ -334,16 +347,21 @@ def update(args_input):
     else:
         print('[DereCo] {0} is a FINISHED working directory'.format(options['wd']))
         print('[DereCo] Update contigs (.fa.gz) in {0}'.format(options['target']))
-        print('[DereCo] Finished contigs: {0}'.format(len(options['added'])))
-        contigs_finished = set([i.split('/')[-1] for i in options['added']])
+        print('[DereCo] Finished contigs: {0}'.format(count))
+        contigs_finished = set([i.split('/')[-1] for i in contigs_finished])
         for item in os.listdir(options['target']):
             if item.endswith('.fa.gz'):
                 if item not in contigs_finished:
                     contigs_add.append(options['target'] + item)
                     print('[DereCo] Add new contig: {0}'.format(item))
         if len(contigs_add) > 0:
+            count_added = 0
             print('[DereCo] Added {0} new contig(s)'.format(len(contigs_add)))
             options['added'] += contigs_add
+            with open(args_input + '.contigs', 'a') as f:
+                for item in contigs_add:
+                    f.write('{0}\n'.format(item))
+                    count_added += 1
         else:
             print('[DereCo] No new contigs found in {0}'.format(options['target']))
             print('[DereCo] EXIT')
@@ -384,6 +402,8 @@ def update(args_input):
     # Print calculate command
     print('[DereCo] Working directory set up ready')
     print('[DereCo] WD = {0}'.format(options['wd']))
+    print('[DereCo] Devoured contigs: {0}'.format(count))
+    print('[DereCo] Added contigs: {0}'.format(count_added))
     print('[DereCo] Large file = {0}'.format(options['big_head_son']))
     print('[DereCo] Small file = {0}'.format(options['small_head_dad']))
     print('[DereCo] New FLOW is ready')
@@ -406,11 +426,21 @@ def status(args_input):
             with open(args_input + 'options.json', 'r') as f:
                 options = json.load(f)
             print('[DereCo] Loading options.json')
+        if not os.path.isfile(args_input + '.contigs'):
+            print('[ERROR] .contigs not exist, {0} is not a working directory'.format(args_input))
+            print('[DereCo] EXIT')
+            sys.exit()
+        else:
+            count = 0
+            with open(args_input + '.contigs', 'r') as f:
+                for line in f:
+                    count +=1
+
     if options['finished']:
         print('[DereCo] Project is FINISHED')
         print('[DereCo] Project path: {0}'.format(options['wd']))
         print('[DereCo] Non-redundant contigs set in {0}'.format(options['final']))
-        print('[DereCo] Compressed from {0} files'.format(len(options['added'])))
+        print('[DereCo] Compressed from {0} files'.format(count))
         print('[DereCo] Cutoff = {0:,}'.format(options['cutoff']))
         print('[DereCo] Minimum length = {0:,}'.format(options['minlen']))
         print('[DereCo] Query length offset: {0}'.format(options['offset']))
@@ -425,7 +455,7 @@ def status(args_input):
         print('[DereCo] Cutoff = {0:,}'.format(options['cutoff']))
         print('[DereCo] Minimum length = {0:,}'.format(options['minlen']))
         print('[DereCo] Source of contigs: {0}'.format(options['target']))
-        print('[DereCo] Added {0} files'.format(len(options['added'])))
+        print('[DereCo] Added {0} files'.format(count))
     with open(args_input + 'FLOW', 'r') as f:
         print('[DereCo] FLOW')
         for line in f:
