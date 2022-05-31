@@ -231,6 +231,7 @@ def calculate(args_input, args_threads, args_offset, args_cigar):
     else:
         with open(args_input + 'options.json', 'r') as f:
             options = json.load(f)
+            options['offset'] = args_offset
             if options['finished']:
                 print('[DeroCo] This directory is marked as FINISHED')
                 sys.exit()
