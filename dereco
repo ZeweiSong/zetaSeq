@@ -19,6 +19,7 @@ import sys
 import os
 import json
 import shutil
+import time
 from zetaSeq import io as seqIO
 
 
@@ -51,6 +52,8 @@ def check_dependency(tools):
 
 
 def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
+    time_span = [0, 0]
+    time_span[0] = time.time()
     print('Dereco: dereplicate a group of contigs')
     if args_sourmash: check_dependency(['seqtk', 'vsearch', 'sourmash'])
     else: check_dependency(['seqtk', 'vsearch'])
@@ -187,6 +190,8 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
     print('[DereCo] Generated options.jaon')
     print('[DereCo] Generated FLOW')
     print('[DereCo] Next run: dereco calculate -i {0} -t [threads]'.format(args_output))
+    time_span[1] = time.time
+    print('[DereCo] Used {0:,.0f} seconds'.format(time_span[1] - time_span[0]))
 
     return None
 
@@ -262,6 +267,8 @@ def get_size_count(input_seqs):
 
 
 def devour(args_input, args_threads, args_offset, args_cigar):
+    time_span = [0, 0]
+    time_span[0] = time.time()
     if not args_input.endswith('/'): args_input += '/'
     if not os.path.isfile(args_input + 'options.json'):
         print('[ERROR] Did not find options.json, use "dereco create" to set up the working directory.')
@@ -360,9 +367,14 @@ def devour(args_input, args_threads, args_offset, args_cigar):
         print('To update: dereco update -i {0} -t [threads]'.format(options['wd']))
     with open(args_input + 'options.json', 'w') as f:
         json.dump(options, f)
+    time_span[1] = time.time()
+    print('[DereCo] Used: {0:,.0f} seconds'.format(time_span[1] - time_span[0]))
 
+    return None
 
 def update(args_input):
+    time_span = [0, 0]
+    time_span[0] = time.time()
     # Check options.json
     if os.path.isfile(args_input + 'options.json'):
         with open(args_input + 'options.json', 'r') as f:
@@ -444,7 +456,10 @@ def update(args_input):
     print('[DereCo] Small file = {0}'.format(options['small_head_dad']))
     print('[DereCo] New FLOW is ready')
     print('[DereCo] NEXT run: dereco calculate -i {0} -t [threads]'.format(options['wd']))
+    time_span[1] = time.time()
+    print('[DereCo] Used: {0:,.0f}'.format(time_span[1] - time_span[0]))
 
+    return None
 
 def status(args_input):
     print('[DereCo] Checking {0}'.format(args_input))
@@ -505,6 +520,17 @@ def status(args_input):
         cmd = ' '.join(cmd)
         print('[SOURMASH] ' + cmd)
         os.system(cmd)
+
+
+def layout():
+    time_span = [0, 0]
+    time_span[0] = time.time()
+    pass
+    time_span[1] = time.time()
+    print('[DereCo] Used: {0:,0f} seconds'.format(time_span[1] - time_span[0]))
+    
+    return None
+
 
 if len(sys.argv[:]) == 1:
     option = ''
