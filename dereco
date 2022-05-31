@@ -37,7 +37,7 @@ def print_help():
     print('')
 
 
-def create(args_input, args_output, args_cutoff, args_minlen):
+def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
     print('Dereco: dereplicate a group of contigs')
     folder = False
     fagz = []
@@ -83,7 +83,8 @@ def create(args_input, args_output, args_cutoff, args_minlen):
                'target': args_input, 'wd': args_output,
                'folder': folder, 'final': '', 'finished': False,
                'threads': 1, 'added': [], 'cigar': False,
-               'origin_size':0, 'derep_size':0}
+               'origin_size': 0, 'derep_size': 0,
+               'sig': args_sourmash}
     if folder:
         options['added'] = fagz
 
@@ -115,6 +116,17 @@ def create(args_input, args_output, args_cutoff, args_minlen):
     os.system(cmd)
     if folder:
         os.system('rm ' + args_output + '_tmp.cat.fa.gz')  # remove the temp cat file
+
+    # sourmash signature
+    if options['sig']:
+        print('[DereCo] Calculating sourmash sigature: k=21,k=31,k=51,scaled=1000,abund to {0}'.format(agrs_output + 'minhash_origin.sig'))
+        cmd = ['sourmash sketch dna']
+        cmd += ['-p k=21,k=31,k=51,scaled=1000,abund']
+        cmd += [args_output + '_tmp.cat.renamed.fa']
+        cmd += ['-o ' + agrs_output + 'minhash_origin.sig']
+        cmd = ' '.join(cmd)
+        print('[SOURMASH] ' + cmd)
+        os.system(cmd)
 
     # Write large and small sequences to the working folder
     print('Length cutoff: {0}'.format(args_cutoff))
@@ -289,6 +301,8 @@ def devour(args_input, args_threads, args_offset, args_cigar):
 
     if os.path.isfile(args_input + 'dereco_final.fa'):
         os.system('touch ' + args_input + 'FINISHED')
+        os.remove(options['large_file'])
+        os.remvoe(options['small_file'])
     
     sum1, c1 = get_size_count(args_input + 'dereco_final.fa')
     print('\n\t---Report---')
@@ -429,11 +443,12 @@ if option == 'create':
     parser.add_argument('-o', '--output', help='Path to the output folder.')
     parser.add_argument('-c', '--cutoff', type=int, default=1000000, help='Length cutff to divide the input.')
     parser.add_argument('-m', '--minlen', type=int, default=2000, help='Minimum length to keep a sequence.')
+    parser.add_argument('-s', '--sourmash', action='store_true', help='Indicator to calculate minHash siganture using sourmash.')
     if len(sys.argv[:]) == 2:
         parser.print_help()
     else:
         args = parser.parse_args(sys.argv[2:])
-        create(args.input, args.output, args.cutoff, args.minlen)
+        create(args.input, args.output, args.cutoff, args.minlen, args.sourmash)
 elif option in ('devour', 'devo'):
     print('DEVOUR short sequences into longer ones passing a similarity threshold')
     parser = argparse.ArgumentParser(prog='dereco calculate')
