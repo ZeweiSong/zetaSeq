@@ -138,11 +138,11 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
 
     # sourmash signature
     if options['sig']:
-        print('[DereCo] Calculating sourmash sigature: k=21,k=31,k=51,scaled=1000,abund to {0}'.format(agrs_output + 'minhash_origin.sig'))
+        print('[DereCo] Calculating sourmash sigature: k=21,k=31,k=51,scaled=1000,abund to {0}'.format(args_output + 'minhash_origin.sig'))
         cmd = ['sourmash sketch dna']
         cmd += ['-p k=21,k=31,k=51,scaled=1000,abund']
         cmd += [args_output + '_tmp.cat.renamed.fa']
-        cmd += ['-o ' + agrs_output + 'minhash_origin.sig']
+        cmd += ['-o ' + args_output + 'minhash_origin.sig']
         cmd = ' '.join(cmd)
         print('[SOURMASH] ' + cmd)
         os.system(cmd)
@@ -333,7 +333,7 @@ def devour(args_input, args_threads, args_offset, args_cigar):
     if os.path.isfile(args_input + 'dereco_final.fa'):
         os.system('touch ' + args_input + 'FINISHED')
         os.remove(options['big_head_son'])
-        os.remvoe(options['small_head_dad'])
+        os.remove(options['small_head_dad'])
     
     sum1, c1 = get_size_count(args_input + 'dereco_final.fa')
     count = 0
@@ -359,7 +359,7 @@ def update(args_input):
         with open(args_input + 'options.json', 'r') as f:
             options = json.load(f)
     count = 0
-    contigs_finished
+    contigs_finished = []
     with open(args_input + '.contigs', 'r') as f:
         for line in f:
             contigs_finished.append(line.strip('\n'))
