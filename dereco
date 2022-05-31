@@ -429,7 +429,7 @@ elif option in ('calculate', 'calc'):
     parser = argparse.ArgumentParser(prog='dereco calculate')
     parser.add_argument('-i', '--input', help='Path to the prep output folder.')
     parser.add_argument('-f', '--offset', default=0, type=int, help='Offset for the match length')
-    parser.add_argument('-c', '--cigar', action='store_true', help'Use more accurate mode of minimap2, but slower.')
+    parser.add_argument('-c', '--cigar', action='store_true', help='Use more accurate mode of minimap2, but slower.')
     parser.add_argument('-t', '--threads', type=int, default=2, help='Number of threads')
     if len(sys.argv[:]) == 2:
         parser.print_help()
