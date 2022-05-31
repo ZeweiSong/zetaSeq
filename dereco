@@ -37,8 +37,23 @@ def print_help():
     print('')
 
 
+def check_dependency(tools):
+    checker =[False] * len(tools)
+    for index, item in enumerate(tools):
+        if shutil.which(item) is None:
+            print('[ERROR] {0} is not found in your ENV'.format(item))
+            checker[index] = True
+        else:
+            print('[DereCo] {0} is ready'.format(item))
+    if sum(checker) > 0:
+        print('[DereCo] EXIT')
+        sys.exit()
+
+
 def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
     print('Dereco: dereplicate a group of contigs')
+    if args_sourmash: check_dependency(['seqtk', 'vsearch', 'sourmash'])
+    else: check_dependency(['seqtk', 'vsearch'])
     folder = False
     fagz = []
     sn = ''
@@ -257,7 +272,9 @@ def devour(args_input, args_threads, args_offset, args_cigar):
                     for line in f:
                         line = line.strip('\n').split('\t')
                         flow.append(tuple(line))
-
+    if options['sig']: check_dependency(['seqtk', 'minimap2', 'sourmash'])
+    else: check_dependency(['seqtk', 'minimap2'])
+    
     print('[DereCo] Cutoff: {0}'.format(options['cutoff']))
     print('[DereCo] Minimum length: {0}'.format(options['minlen']))
     print('[DereCo] Query length offset: {0}'.format(options['offset']))
@@ -302,6 +319,16 @@ def devour(args_input, args_threads, args_offset, args_cigar):
 
     options['final'] = args_input + 'dereco_final.fa'
     options['finished'] = True
+
+    if options['sig']:
+        cmd = ['sourmash sketch dna']
+        cmd += ['-p k=21,k=31,k=51,scaled=1000,abund']
+        cmd += [options['final']]
+        cmd += ['-o ' + args_input + 'minhash_derep.sig']
+        cmd = ' '.join(cmd)
+        print('[DereCo] Calculating minhash sigature for the dereplicated file')
+        print('[SOURMASH] ' + cmd)
+        os.system(cmd)
 
     if os.path.isfile(args_input + 'dereco_final.fa'):
         os.system('touch ' + args_input + 'FINISHED')
@@ -461,7 +488,14 @@ def status(args_input):
         for line in f:
             line = line.strip('\n').split('\t')
             print('[DereCo] FLOW: {0} -> {1}'.format(line[0], line[1]))
-
+    if options['finished'] and options['sig']:
+        cmd = ['sourmash compare']
+        cmd += ['-k 21']
+        cmd += [args_input + 'minhash_origin.sig']
+        cmd += [args_input + 'minhash_derep.sig']
+        cmd = ' '.join(cmd)
+        print('[SOURMASH] ' + cmd)
+        os.system(cmd)
 
 if len(sys.argv[:]) == 1:
     option = ''
