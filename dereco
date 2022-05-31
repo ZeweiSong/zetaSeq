@@ -140,7 +140,7 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
     if options['sig']:
         print('[DereCo] Calculating sourmash sigature: k=21,k=31,k=51,scaled=1000,abund to {0}'.format(args_output + 'minhash_origin.sig'))
         cmd = ['sourmash sketch dna']
-        cmd += ['-p k=21,k=31,k=51,scaled=1000,abund']
+        cmd += ['-p k=21,k=31,k=51,scaled=100000,abund']
         cmd += [args_output + '_tmp.cat.renamed.fa']
         cmd += ['-o ' + args_output + 'minhash_origin.sig']
         cmd = ' '.join(cmd)
@@ -322,7 +322,7 @@ def devour(args_input, args_threads, args_offset, args_cigar):
 
     if options['sig']:
         cmd = ['sourmash sketch dna']
-        cmd += ['-p k=21,k=31,k=51,scaled=1000,abund']
+        cmd += ['-p k=21,k=31,k=51,scaled=100000,abund']
         cmd += [options['final']]
         cmd += ['-o ' + args_input + 'minhash_derep.sig']
         cmd = ' '.join(cmd)
