@@ -522,10 +522,30 @@ def status(args_input):
         os.system(cmd)
 
 
+def graph(ava_paf):
+    link = []
+    with open(ava_paf, 'r') as f:
+        for line in f:
+            line = line.strip('\n').split('\t')
+            query = {'name': line[0], 'len':int(line[1]), 'start':int(line[2]), 'end':int(line[3]), 'strand':line[4]}
+            target = {'name':line[5], 'len':int(line[6]), 'start':int(line[7]), 'end':int(line[8])}
+            match = {'match': int(line[9]), 'align': int(line[10])}
+            if query['strand'] == '+':
+                qtail = query['len'] - query['end']
+                ttail = target['start']
+            else:
+                qtail = query['len'] - query['end']
+                ttail = target['len'] - target['end']
+            pident = match['match'] / match['align']
+            if qtail <= 600 and ttail <= 600 and pident >= 0.99:
+                link.append((query['name'], target['name'], 'query'['strand']))
+
+    return link
+
 def layout():
     time_span = [0, 0]
     time_span[0] = time.time()
-    pass
+    # minimap2 ava-ont -c
     time_span[1] = time.time()
     print('[DereCo] Used: {0:,0f} seconds'.format(time_span[1] - time_span[0]))
     
