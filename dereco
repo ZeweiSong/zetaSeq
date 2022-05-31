@@ -169,7 +169,7 @@ def derep_paf(input_paf, offset):
             if line[0] != line[5] and int(line[1]) < int(line[6]):  # alignment is short --> long
                 ident = float(int(line[10]) / int(line[9]))  # This is the identity (similarity) of the alignment
                 match = float(int(line[10]) / (int(line[1]) - offset))  # This is the percent of length matched on query
-                if ident > 0.99 and match > 0.97:
+                if ident >= 0.99 and match >= 0.97:
                     removal.append(line[0])
         removal = set(removal)
     return removal
@@ -252,7 +252,11 @@ def calculate(args_input, args_threads, args_offset, args_cigar):
     sum0 = [0,0]
     c0 = [0, 0]
     sum0[0], c0[0] = get_size_count(options['large_file'])
-    sum0[1], c0[1] = get_size_count(options['small_file']) 
+    try:
+        sum0[1], c0[1] = get_size_count(options['small_file'])
+    except IndexError:
+        sum0[1], c0[1] = 0, 0
+    
     print('[DereCo] FLOW started:')
     for item in flow:
         query = item[0]
@@ -282,8 +286,6 @@ def calculate(args_input, args_threads, args_offset, args_cigar):
 
     options['final'] = args_input + 'dereco_final.fa'
     options['finished'] = True
-    with open(args_input + 'options.json', 'w') as f:
-        json.dump(options, f)
 
     if os.path.isfile(args_input + 'dereco_final.fa'):
         os.system('touch ' + args_input + 'FINISHED')
@@ -298,6 +300,8 @@ def calculate(args_input, args_threads, args_offset, args_cigar):
     options['cigar'] = args_cigar
     if options['folder']:
         print('To update: dereco update -i {0} -t [threads]'.format(options['wd']))
+    with open(args_input + 'options.json', 'w') as f:
+        json.dump(options, f)
 
 
 def update(args_input):
@@ -394,6 +398,11 @@ def status(args_input):
         print('[DereCo] Compressed from {0} files'.format(len(options['added'])))
         print('[DereCo] Cutoff = {0:,}'.format(options['cutoff']))
         print('[DereCo] Minimum length = {0:,}'.format(options['minlen']))
+        print('[DereCo] Query length offset: {0}'.format(options['offset']))
+        if options['cigar']: print('[DereCo] Cigar enabled in minimap2')
+        else: print('[DereCo] Ciagr disabled in minimap2')
+        print('[DereCo] Origin versus derep: {0:,} / {1:,} (bps)'.format(options['origin_size'], options['derep_size']))
+        print('[DereCo] Compression rate: {0:.2f}'.format(options['origin_size'] / options['derep_size']))        
         print('[DereCo] Path to update: {0}'.format(options['target']))
     else:
         print('[DereCo] Project is NOT finished')
