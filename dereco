@@ -237,7 +237,7 @@ def dereplicate(query, ref, threads, offset, cigar):
         rm_names = []
         rm_bps, rm_max, rm_min, rm_ave = 0, 0, 0, 0
     keep = [i[0] for i in seqIO.sequence(query) if i[0] not in rm_names]
-    print('[DereCo] Removing {0:,} sequences: {1:,} bps, {2:,} / seq, MAX = {3:,}, MIN = {4:,}'.format(len(removal), rm_bps, rm_ave, rm_max, rm_min))
+    print('[DereCo] Removing {0:,} sequences: {1:,} bps, {2:,.0f} / seq, MAX = {3:,}, MIN = {4:,}'.format(len(removal), rm_bps, rm_ave, rm_max, rm_min))
     with open('_kplist', 'w') as f:
         f.write('{0}\n'.format('\n'.join(keep)))
     cmd = ['seqtk subseq']
