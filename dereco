@@ -146,6 +146,7 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
         cmd += ['-p k=21,k=31,k=51,scaled=100000,abund']
         cmd += [args_output + '_tmp.cat.renamed.fa']
         cmd += ['-o ' + args_output + 'minhash_origin.sig']
+        cmd += ['2> /dev/null']
         cmd = ' '.join(cmd)
         print('[SOURMASH] ' + cmd)
         os.system(cmd)
@@ -190,7 +191,7 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
     print('[DereCo] Generated options.jaon')
     print('[DereCo] Generated FLOW')
     print('[DereCo] Next run: dereco calculate -i {0} -t [threads]'.format(args_output))
-    time_span[1] = time.time
+    time_span[1] = time.time()
     print('[DereCo] Used {0:,.0f} seconds'.format(time_span[1] - time_span[0]))
 
     return None
@@ -341,6 +342,7 @@ def devour(args_input, args_threads, args_offset, args_cigar):
         cmd += ['-p k=21,k=31,k=51,scaled=100000,abund']
         cmd += [options['final']]
         cmd += ['-o ' + args_input + 'minhash_derep.sig']
+        cmd += ['2> /dev/null']
         cmd = ' '.join(cmd)
         print('[DereCo] Calculating minhash sigature for the dereplicated file')
         print('[SOURMASH] ' + cmd)
@@ -538,7 +540,7 @@ def graph(ava_paf):
                 ttail = target['len'] - target['end']
             pident = match['match'] / match['align']
             if qtail <= 600 and ttail <= 600 and pident >= 0.99:
-                link.append((query['name'], target['name'], 'query'['strand']))
+                link.append((query['name'], target['name'], queryy['strand']))
 
     return link
 
