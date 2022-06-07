@@ -265,7 +265,7 @@ def dereplicate(query, ref, threads, offset, cigar):
     os.remove(query)
     shutil.move(tmp_header + '_query.fa', query)
     os.remove(tmp_header + '_kplist')
-    os.remove(tmp_header + '_tmp.paf')
+    os.remove(tmp_header + '.paf')
     print('[DereCo] {0} is dereplicated'.format(query))
 
     return None
