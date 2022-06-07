@@ -21,6 +21,9 @@ import json
 import shutil
 import time
 from zetaSeq import io as seqIO
+import hashlib
+import random
+import string
 
 
 def print_help():
@@ -49,6 +52,12 @@ def check_dependency(tools):
     if sum(checker) > 0:
         print('[DereCo] EXIT')
         sys.exit()
+
+
+def get_random_string(length):
+    letters = string.ascii_lowercase
+    result_str = ''.join(random.choice(letters) for i in range(length))
+    return result_str
 
 
 def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
@@ -100,7 +109,7 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
     options = {'cutoff': args_cutoff, 'minlen': args_minlen,
                'target': args_input, 'wd': args_output,
                'folder': folder, 'final': '', 'finished': False,
-               'threads': 1, 'added': [], 'cigar': False,
+               'threads': 1, 'cigar': False,
                'origin_size': 0, 'derep_size': 0,
                'sig': args_sourmash,
                'big_head_son':'', 'small_head_dad':''}
@@ -108,8 +117,9 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
         with open(args_output + '.contigs', 'w') as f:
             for item in fagz:
                f.write('{0}\n'.format(item))
-        options['added'] = fagz
-
+    else:
+        with open(args_output + '.contigs', 'w') as f:
+            f.write('{0}\n'.format(args_input))
     # Rename the sequence names to avoid duplicated label
     if folder:  # Target is a folder, will concat all its .fa.gz files first
         cmd = ['cat']
@@ -214,20 +224,22 @@ def derep_paf(input_paf, offset):
 # Dereplicate a query file against the ref file
 def dereplicate(query, ref, threads, offset, cigar):
     # minimap2 asm5 ref query
+    hash_object = hashlib.md5((args_input+get_random_string(10).encode())
+    tmp_header = '__tmp__' + hash_object.hexdigest()
     cmd = ['minimap2']
     cmd += ['-x asm5']
     cmd += ['-t ' + str(threads)]
     if cigar: cmd += ['-c']
     cmd += [ref]
     cmd += [query]
-    cmd += ['-o ' + '_tmp.paf']
+    cmd += ['-o ' + tmp_header + '.paf']
     cmd += ['2> /dev/null']
     cmd = ' '.join(cmd)
     print('[MINIMAP2] ' + cmd)
     os.system(cmd)
 
     # dereplicate query against ref
-    removal = derep_paf('_tmp.paf', offset)
+    removal = derep_paf(tmp_header + '.paf', offset)
     if len(removal) > 0:
         rm_names = set([x[0] for x in removal])
         rm_bps = sum([x[1] for x in removal])
@@ -239,21 +251,21 @@ def dereplicate(query, ref, threads, offset, cigar):
         rm_bps, rm_max, rm_min, rm_ave = 0, 0, 0, 0
     keep = [i[0] for i in seqIO.sequence(query) if i[0] not in rm_names]
     print('[DereCo] Removing {0:,} sequences: {1:,} bps, {2:,.0f} / seq, MAX = {3:,}, MIN = {4:,}'.format(len(removal), rm_bps, rm_ave, rm_max, rm_min))
-    with open('_kplist', 'w') as f:
+    with open(tmp_header + '_kplist', 'w') as f:
         f.write('{0}\n'.format('\n'.join(keep)))
     cmd = ['seqtk subseq']
     cmd += [query]
-    cmd += ['_kplist']
-    cmd += ['> ' + '_query.fa']
+    cmd += [tmp_header + '_kplist']
+    cmd += ['> ' + tmp_header + '_query.fa']
     cmd = ' '.join(cmd)
     print('[SEQTK] ' + cmd)
     os.system(cmd)
 
     # replace old query with new query
     os.remove(query)
-    shutil.move('_query.fa', query)
-    os.remove('_kplist')
-    os.remove('_tmp.paf')
+    shutil.move(tmp_header + '_query.fa', query)
+    os.remove(tmp_header + '_kplist')
+    os.remove(tmp_header + '_tmp.paf')
     print('[DereCo] {0} is dereplicated'.format(query))
 
     return None
@@ -268,6 +280,8 @@ def get_size_count(input_seqs):
 
 
 def devour(args_input, args_threads, args_offset, args_cigar):
+    hash_object = hashlib.md5((args_input+get_random_string(10).encode())
+    tmp_header = '__tmp__' + hash_object.hexdigest()
     time_span = [0, 0]
     time_span[0] = time.time()
     if not args_input.endswith('/'): args_input += '/'
@@ -407,7 +421,6 @@ def update(args_input):
         if len(contigs_add) > 0:
             count_added = 0
             print('[DereCo] Added {0} new contig(s)'.format(len(contigs_add)))
-            options['added'] += contigs_add
             with open(args_input + '.contigs', 'a') as f:
                 for item in contigs_add:
                     f.write('{0}\n'.format(item))
