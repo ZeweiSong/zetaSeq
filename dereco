@@ -313,6 +313,7 @@ def devour(args_input, args_threads, args_offset, args_cigar):
     if options['cigar']: print('[DereCo] Cigar enabled in minimap2')
     else: print('[DereCo] Cigar disabled in minimap2')   
 
+    # Get the original file size and count
     sum0 = [0,0]
     c0 = [0, 0]
     sum0[0], c0[0] = get_size_count(options['big_head_son'])
@@ -375,9 +376,12 @@ def devour(args_input, args_threads, args_offset, args_cigar):
     print('\n\t---Report---')
     print('Number of contigs: {0}'.format(count))
     print('Compression rate: {0:.2f}'.format(sum(sum0) / (sum1)))
-    print('Origin size / Derep size: {0:,} / {1:,}'.format(sum(sum0), sum1))
+    print('Origin size / Derep size: {0:,} / {1:,} --> {2:,} bps'.format(sum(sum0), sum1, sum(sum0) - sum1))
+    print('Origin count / Derep count: {0:,} / {1:,} --> {2:,} seqs'.format(sum(c0), c1, sum(c0) - c1))
     options['origin_size'] = sum(sum0)
     options['derep_size'] = sum1
+    options['origin_count'] = sum(c0)
+    options['derep_count'] = c1
     options['cigar'] = args_cigar
     if options['folder']:
         print('To update: dereco update -i {0} -t [threads]'.format(options['wd']))
