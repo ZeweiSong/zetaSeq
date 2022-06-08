@@ -77,14 +77,31 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
                'threads': 1, 'cigar': False,
                'origin_size': 0, 'derep_size': 0,
                'origin_count': 0, 'origin_count': 0,
-               'sig': args_sourmash, 'log': args_input + 'log',
+               'sig': args_sourmash, 'log': args_output + 'log',
                'big_head_son':'', 'small_head_dad':''}
 
     time_span = [0, 0] # Time recorder
     time_span[0] = time.time()
+    
+    # Check if the output folder exist
+    if not args_output.endswith('/'): args_output += '/'
+    if os.path.isdir(args_output):
+        printi('[ERROR] The output folder {0} already exist, please check it.'.format(args_output))
+        sys.exit()
+    else:
+        os.mkdir(args_output)
+        print('Working folder generated at: {0}'.format(args_output))
+    # Create an empty log file
+    with open(options['log'], 'w') as f:
+        pass
+    # Initiate the log file
     print_log('Dereco: dereplicate a group of contigs', options['log'])
+    
+    # Check dependency
     if args_sourmash: check_dependency(['seqtk', 'vsearch', 'sourmash'])
     else: check_dependency(['seqtk', 'vsearch'])
+    
+    # Check input file(s)
     fagz = []
     if os.path.isfile(args_input):  # Input is a file
         print_log('Origin file: {0}'.format(args_input), options['log'])
@@ -113,14 +130,6 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
             print_log('[DereCo] EXIT', options['log'])
             sys.exit()
 
-    # Check if the output folder exist
-    if not args_output.endswith('/'): args_output += '/'
-    if os.path.isdir(args_output):
-        print_log('[ERROR] The output folder {0} already exist, please check it.'.format(args_output), options['log'])
-        sys.exit()
-    else:
-        os.mkdir(args_output)
-        print_log('Working folder generated at: {0}'.format(args_output), options['log'])
 
 
     if options['folder']:
