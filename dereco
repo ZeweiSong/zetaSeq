@@ -422,6 +422,10 @@ def update(args_input):
     if os.path.isfile(args_input + 'options.json'):
         with open(args_input + 'options.json', 'r') as f:
             options = json.load(f)
+    else:
+        print('[ERROR] options.json is missing in {0}'.format(args_input))
+        print('[DereCo] EXIT')
+        sys.exit()
     count = 0
     contigs_finished = []
     with open(args_input + '.contigs', 'r') as f:
@@ -430,31 +434,31 @@ def update(args_input):
             count += 1
     contigs_add = []
     if not options['folder']:  # Target is not a folder
-        print('[ERROR] Target is a file not a directory.')
-        print('[DereCo] EXIT')
+        print_log('[ERROR] Target is a file not a directory.', options['log'])
+        print_log('[DereCo] EXIT', options['log'])
     elif not options['finished']:  # Input directory is NOT finished
-        print('[ERROR] Input directory is not finished.')
-        print('[DereCo] run: dereco calculate -i {0} -t [threads]'.format(options['wd']))
+        print_log('[ERROR] Input directory is not finished.', options['log'])
+        print_log('[DereCo] run: dereco calculate -i {0} -t [threads]'.format(options['wd']), options['log'])
     else:
-        print('[DereCo] {0} is a FINISHED working directory'.format(options['wd']))
-        print('[DereCo] Update contigs (.fa.gz) in {0}'.format(options['target']))
-        print('[DereCo] Finished contigs: {0}'.format(count))
+        print_log('[DereCo] {0} is a FINISHED working directory'.format(options['wd']), options['log'])
+        print_log('[DereCo] Update contigs (.fa.gz) in {0}'.format(options['target']), options['log'])
+        print_log('[DereCo] Finished contigs: {0}'.format(count), options['log'])
         contigs_finished = set([i.split('/')[-1] for i in contigs_finished])
         for item in os.listdir(options['target']):
             if item.endswith('.fa.gz'):
                 if item not in contigs_finished:
                     contigs_add.append(options['target'] + item)
-                    print('[DereCo] Add new contig: {0}'.format(item))
+                    print_log('[DereCo] Add new contig: {0}'.format(item), options['log'])
         if len(contigs_add) > 0:
             count_added = 0
-            print('[DereCo] Added {0} new contig(s)'.format(len(contigs_add)))
+            print_log('[DereCo] Added {0} new contig(s)'.format(len(contigs_add)), options['log'])
             with open(args_input + '.contigs', 'a') as f:
                 for item in contigs_add:
                     f.write('{0}\n'.format(item))
                     count_added += 1
         else:
-            print('[DereCo] No new contigs found in {0}'.format(options['target']))
-            print('[DereCo] EXIT')
+            print_log('[DereCo] No new contigs found in {0}'.format(options['target']), options['log'])
+            print_log('[DereCo] EXIT', options['log'])
             sys.exit()
 
     # concat new contigs as new small file
@@ -463,7 +467,7 @@ def update(args_input):
     cmd += [' '.join(contigs_add)]
     cmd += ['| seqtk seq -L ' + str(options['minlen']) + ' -C | seqtk rename - added_ > ' + options['small_head_dad']] # need to use seqtk seq -C to remove comments in labels
     cmd = ' '.join(cmd)
-    print('[SHELL] ' + cmd)
+    print_log('[SHELL] ' + cmd, options['log'])
     os.system(cmd)
 
     # Set large_file = final
@@ -472,7 +476,7 @@ def update(args_input):
     cmd += [options['final']]
     cmd += [options['big_head_son']]
     cmd = ' '.join(cmd)
-    print('[SHELL] ' + cmd)
+    print_log('[SHELL] ' + cmd, options['log'])
     shutil.move(options['final'], options['big_head_son'])
     options['final'] = ''
    
@@ -489,17 +493,17 @@ def update(args_input):
     if os.path.isfile(options['wd'] + 'FINISHED'):
         os.remove(options['wd'] + 'FINISHED')
 
-    # Print calculate command
-    print('[DereCo] Working directory set up ready')
-    print('[DereCo] WD = {0}'.format(options['wd']))
-    print('[DereCo] Devoured contigs: {0}'.format(count))
-    print('[DereCo] Added contigs: {0}'.format(count_added))
-    print('[DereCo] Large file = {0}'.format(options['big_head_son']))
-    print('[DereCo] Small file = {0}'.format(options['small_head_dad']))
-    print('[DereCo] New FLOW is ready')
-    print('[DereCo] NEXT run: dereco calculate -i {0} -t [threads]'.format(options['wd']))
+    # Print devour command
+    print_log('[DereCo] Working directory set up ready', options['log'])
+    print_log('[DereCo] WD = {0}'.format(options['wd']), options['log'])
+    print_log('[DereCo] Devoured contigs: {0}'.format(count), options['log'])
+    print_log('[DereCo] Added contigs: {0}'.format(count_added), options['log'])
+    print_log('[DereCo] Large file = {0}'.format(options['big_head_son']), options['log'])
+    print_log('[DereCo] Small file = {0}'.format(options['small_head_dad']), options['log'])
+    print_log('[DereCo] New FLOW is ready', options['log'])
+    print_log('[DereCo] NEXT run: dereco devour -i {0} -t [threads]'.format(options['wd']), options['log'])
     time_span[1] = time.time()
-    print('[DereCo] Used: {0:,.0f}'.format(time_span[1] - time_span[0]))
+    print_log('[DereCo] Used: {0:,.0f}'.format(time_span[1] - time_span[0]), options['log'])
 
     return None
 
