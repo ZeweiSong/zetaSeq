@@ -41,6 +41,13 @@ def print_help():
     print('')
 
 
+def print_log(msg, log_file):
+    print(msg)
+    with open(log_file, 'a') as f:
+        msg = msg.strip('\n')
+        f.write('{0}\n'.format(msg))
+
+
 def check_dependency(tools):
     checker =[False] * len(tools)
     for index, item in enumerate(tools):
