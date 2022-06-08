@@ -24,6 +24,7 @@ from zetaSeq import io as seqIO
 import hashlib
 import random
 import string
+from datetime import datetime
 
 
 def print_help():
@@ -42,10 +43,11 @@ def print_help():
 
 
 def print_log(msg, log_file):
+    date_string = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
     print(msg)
     with open(log_file, 'a') as f:
         msg = msg.strip('\n')
-        f.write('{0}\n'.format(msg))
+        f.write('{0}\t{1}\n'.format(date_string, msg))
 
 
 def check_dependency(tools):
@@ -68,26 +70,34 @@ def get_random_string(length):
 
 
 def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
-    time_span = [0, 0]
+    # Create an option dictionary
+    options = {'cutoff': args_cutoff, 'minlen': args_minlen,
+               'target': args_input, 'wd': args_output,
+               'folder': False, 'final': '', 'finished': False,
+               'threads': 1, 'cigar': False,
+               'origin_size': 0, 'derep_size': 0,
+               'origin_count': 0, 'origin_count': 0,
+               'sig': args_sourmash, 'log': args_input + 'log'
+               'big_head_son':'', 'small_head_dad':''}
+
+    time_span = [0, 0] # Time recorder
     time_span[0] = time.time()
-    print('Dereco: dereplicate a group of contigs')
+    print_log('Dereco: dereplicate a group of contigs', options['log'])
     if args_sourmash: check_dependency(['seqtk', 'vsearch', 'sourmash'])
     else: check_dependency(['seqtk', 'vsearch'])
-    folder = False
     fagz = []
-    sn = ''
     if os.path.isfile(args_input):  # Input is a file
-        print('Origin file: {0}'.format(args_input))
+        print_log('Origin file: {0}'.format(args_input), options['log'])
         if args_input.endswith('.fa') or args_input.endswith('.fa.gz'):
             pass
         else:
-            print('[ERROR] The input file has to be .fa or .fa.gz')
+            print_log('[ERROR] The input file has to be .fa or .fa.gz', options['log'])
             sys.exit()
         target_file = args_input
     elif os.path.isdir(args_input):  # Input is a folder
         folder = True
         if not args_input.endswith('/'): args_input += '/'
-        print('Origin directory: {0}'.format(args_input))
+        print_log('Origin directory: {0}'.format(args_input), options['log'])
         # Search in the target folder for all .fa.gz files, .fa will be ignored
         count_fa = 0
         for item in os.listdir(args_input):
@@ -96,30 +106,23 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
             elif item.endswith('.fa'):
                 count_fa += 1
         if count_fa > 0:
-            print('Found {0} .fa files in {1}, but will not add them to the working directory'.format(count_fa,
-                                                                                                      args_input))
+            print_log('Found {0} .fa files in {1}, but will not add them '
+                      'to the working directory'.format(count_fa, args_input), options['log'])
         if len(fagz) == 0:
-            print('Found 0 .fa.gz files')
-            print('[DereCo] EXIT')
+            print_log('Found 0 .fa.gz files', options['log'])
+            print_log('[DereCo] EXIT', options['log'])
             sys.exit()
 
     # Check if the output folder exist
     if not args_output.endswith('/'): args_output += '/'
     if os.path.isdir(args_output):
-        print('[ERROR] The output folder {0} already exist, please check it.'.format(args_output))
+        print_log('[ERROR] The output folder {0} already exist, please check it.'.format(args_output), options['log'])
         sys.exit()
     else:
         os.mkdir(args_output)
-        print('Working folder generated at: {0}'.format(args_output))
+        print_log('Working folder generated at: {0}'.format(args_output), options['log'])
 
-    # Write an option file
-    options = {'cutoff': args_cutoff, 'minlen': args_minlen,
-               'target': args_input, 'wd': args_output,
-               'folder': folder, 'final': '', 'finished': False,
-               'threads': 1, 'cigar': False,
-               'origin_size': 0, 'derep_size': 0,
-               'sig': args_sourmash,
-               'big_head_son':'', 'small_head_dad':''}
+
     if folder:
         with open(args_output + '.contigs', 'w') as f:
             for item in fagz:
