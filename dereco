@@ -131,7 +131,7 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
         with open(args_output + '.contigs', 'w') as f:
             f.write('{0}\n'.format(args_input))
     # Rename the sequence names to avoid duplicated label
-    if folder:  # Target is a folder, will concat all its .fa.gz files first
+    if options['folder']:  # Target is a folder, will concat all its .fa.gz files first
         cmd = ['cat']
         cmd += [' '.join(fagz)]
         cmd += ['> ' + args_output + '_tmp.cat.fa.gz']
@@ -156,7 +156,7 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
     cmd = ' '.join(cmd)
     print('[SEQTK] ' + cmd)
     os.system(cmd)
-    if folder:
+    if options['folder']:
         os.system('rm ' + args_output + '_tmp.cat.fa.gz')  # remove the temp cat file
 
     # sourmash signature
