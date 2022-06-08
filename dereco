@@ -91,6 +91,7 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
     else:
         os.mkdir(args_output)
         print('Working folder generated at: {0}'.format(args_output))
+    
     # Create an empty log file
     with open(options['log'], 'w') as f:
         pass
@@ -130,8 +131,7 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
             print_log('[DereCo] EXIT', options['log'])
             sys.exit()
 
-
-
+    # Add files to .contigs
     if options['folder']:
         with open(args_output + '.contigs', 'w') as f:
             for item in fagz:
@@ -139,6 +139,7 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
     else:
         with open(args_output + '.contigs', 'w') as f:
             f.write('{0}\n'.format(args_input))
+
     # Rename the sequence names to avoid duplicated label
     if options['folder']:  # Target is a folder, will concat all its .fa.gz files first
         cmd = ['cat']
@@ -147,10 +148,10 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
         target_file = args_output + '_tmp.cat.fa.gz'
         cmd = ' '.join(cmd)
         if len(fagz) >= 10:
-            print('[DereCo] Concatenate {0} files ...'.format(len(fagz)))
-            print('[SHELL ] cat ' + ' '.join(fagz[:8]) + ' ... ' + fagz[10] + ' > ' + args_output + '_tmp.cat.fa.gz') 
+            print_log('[DereCo] Concatenate {0} files ...'.format(len(fagz)), options['log'])
+            print_log('[SHELL ] cat ' + ' '.join(fagz[:8]) + ' ... ' + fagz[10] + ' > ' + args_output + '_tmp.cat.fa.gz', options['log']) 
         else:
-            print('[SHELL] ' + cmd)
+            print_log('[SHELL] ' + cmd, options['log'])
         os.system(cmd)
     else:
         target_file = args_input
@@ -163,30 +164,31 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
     cmd += ['>']
     cmd += [args_output + '_tmp.cat.renamed.fa']
     cmd = ' '.join(cmd)
-    print('[SEQTK] ' + cmd)
+    print_log('[SEQTK] ' + cmd, options['log'])
     os.system(cmd)
     if options['folder']:
         os.system('rm ' + args_output + '_tmp.cat.fa.gz')  # remove the temp cat file
 
     # sourmash signature
     if options['sig']:
-        print('[DereCo] Calculating sourmash sigature: k=21,k=31,k=51,scaled=1000,abund to {0}'.format(args_output + 'minhash_origin.sig'))
+        print_log('[DereCo] Calculating sourmash sigature: k=21,k=31,k=51,scaled=1000,abund to {0}'.format(args_output + 'minhash_origin.sig'), options['log'])
         cmd = ['sourmash sketch dna']
         cmd += ['-p k=21,k=31,k=51,scaled=100000,abund']
         cmd += [args_output + '_tmp.cat.renamed.fa']
         cmd += ['-o ' + args_output + 'minhash_origin.sig']
         cmd += ['2> /dev/null']
         cmd = ' '.join(cmd)
-        print('[SOURMASH] ' + cmd)
+        print_log('[SOURMASH] ' + cmd, options['log'])
         os.system(cmd)
 
     # Write large and small sequences to the working folder
-    print('Length cutoff: {0}'.format(args_cutoff))
+    print_log('Length cutoff: {0}'.format(args_cutoff), options['log'])
     file_large = args_output + 'contigs.large.fa'
     file_small = args_output + 'contigs.small.fa'
     options['big_head_son'] = file_large
     options['small_head_dad'] = file_small
 
+    # Cut input file with the cutoff
     cmd = ['vsearch --fastx_filter']
     cmd += [args_output + '_tmp.cat.renamed.fa']
     cmd += ['--fastq_minlen ' + str(args_cutoff)]
@@ -195,33 +197,35 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
     cmd += ['--fasta_width 0']
     cmd += ['--quiet']
     cmd = ' '.join(cmd)
-    print('[VSEARCH] ' + cmd)
+    print_log('[VSEARCH] ' + cmd, options['log'])
     os.system(cmd)
     os.remove(args_output + '_tmp.cat.renamed.fa')
 
-    if os.stat(file_large).st_size == 0:  # Check if the large file is empty
-        print('[DereCo] The large file is empty, you may want to lower the cutoff.')
+    # Check if the large file is empty
+    if os.stat(file_large).st_size == 0:
+        print_log('[DereCo] The large file is empty, you may want to lower the cutoff.', options['log'])
         shutil.rmtree(args_output)
-        print('[DereCo] {0} removed'.format(args_output))
-        print('[DereCo] EXIT')
+        print_log('[DereCo] {0} removed'.format(args_output), options['log'])
+        print_log('[DereCo] EXIT', options['log'])
         sys.exit()
     else:
+        # Write to FLOW
         with open(args_output + 'FLOW', 'w') as f:
             f.write('{0}\t{1}\n'.format(file_large, file_large))
             f.write('{0}\t{1}\n'.format(file_small, file_large))
             f.write('{0}\t{1}\n'.format(file_small, file_small))
 
-        # Save the options.json file
+    # Save the options.json file
     with open(args_output + 'options.json', 'w') as f:
         json.dump(options, f)
 
-    print('[DereCo] Generated the LARGE file: {0}'.format(file_large))
-    print('[DereCo] Generated the SMALL file: {0}'.format(file_small))
-    print('[DereCo] Generated options.jaon')
-    print('[DereCo] Generated FLOW')
-    print('[DereCo] Next run: dereco calculate -i {0} -t [threads]'.format(args_output))
+    print_log('[DereCo] Generated the LARGE file: {0}'.format(file_large), options['log'])
+    print_log('[DereCo] Generated the SMALL file: {0}'.format(file_small), options['log'])
+    print_log('[DereCo] Generated options.jaon', options['log'])
+    print_log('[DereCo] Generated FLOW', options['log'])
+    print_log('[DereCo] Next run: dereco calculate -i {0} -t [threads]'.format(args_output), options['log'])
     time_span[1] = time.time()
-    print('[DereCo] Used {0:,.0f} seconds'.format(time_span[1] - time_span[0]))
+    print_log('[DereCo] Used {0:,.0f} seconds'.format(time_span[1] - time_span[0]), options['log'])
 
     return None
 
