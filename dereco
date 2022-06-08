@@ -77,7 +77,7 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
                'threads': 1, 'cigar': False,
                'origin_size': 0, 'derep_size': 0,
                'origin_count': 0, 'origin_count': 0,
-               'sig': args_sourmash, 'log': args_input + 'log'
+               'sig': args_sourmash, 'log': args_input + 'log',
                'big_head_son':'', 'small_head_dad':''}
 
     time_span = [0, 0] # Time recorder
