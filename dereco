@@ -86,7 +86,7 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
     # Check if the output folder exist
     if not args_output.endswith('/'): args_output += '/'
     if os.path.isdir(args_output):
-        printi('[ERROR] The output folder {0} already exist, please check it.'.format(args_output))
+        print('[ERROR] The output folder {0} already exist, please check it.'.format(args_output))
         sys.exit()
     else:
         os.mkdir(args_output)
@@ -205,8 +205,8 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
     if os.stat(file_large).st_size == 0:
         print_log('[DereCo] The large file is empty, you may want to lower the cutoff.', options['log'])
         shutil.rmtree(args_output)
-        print_log('[DereCo] {0} removed'.format(args_output), options['log'])
-        print_log('[DereCo] EXIT', options['log'])
+        print('[DereCo] {0} removed'.format(args_output))
+        print('[DereCo] EXIT')
         sys.exit()
     else:
         # Write to FLOW
@@ -245,7 +245,7 @@ def derep_paf(input_paf, offset):
     return removal
 
 # Dereplicate a query file against the ref file
-def dereplicate(query, ref, threads, offset, cigar):
+def dereplicate(query, ref, threads, offset, cigar, options):
     # minimap2 asm5 ref query
     hash_object = hashlib.md5((query+ref+get_random_string(10)).encode())
     tmp_header = '__tmp__' + hash_object.hexdigest()
@@ -258,7 +258,7 @@ def dereplicate(query, ref, threads, offset, cigar):
     cmd += ['-o ' + tmp_header + '.paf']
     cmd += ['2> /dev/null']
     cmd = ' '.join(cmd)
-    print('[MINIMAP2] ' + cmd)
+    print_log('[MINIMAP2] ' + cmd, options['log'])
     os.system(cmd)
 
     # dereplicate query against ref
@@ -273,7 +273,7 @@ def dereplicate(query, ref, threads, offset, cigar):
         rm_names = []
         rm_bps, rm_max, rm_min, rm_ave = 0, 0, 0, 0
     keep = [i[0] for i in seqIO.sequence(query) if i[0] not in rm_names]
-    print('[DereCo] Removing {0:,} sequences: {1:,} bps, {2:,.0f} / seq, MAX = {3:,}, MIN = {4:,}'.format(len(removal), rm_bps, rm_ave, rm_max, rm_min))
+    print_log('[DereCo] Removing {0:,} sequences: {1:,} bps, {2:,.0f} / seq, MAX = {3:,}, MIN = {4:,}'.format(len(removal), rm_bps, rm_ave, rm_max, rm_min), options['log'])
     with open(tmp_header + '_kplist', 'w') as f:
         f.write('{0}\n'.format('\n'.join(keep)))
     cmd = ['seqtk subseq']
@@ -281,7 +281,7 @@ def dereplicate(query, ref, threads, offset, cigar):
     cmd += [tmp_header + '_kplist']
     cmd += ['> ' + tmp_header + '_query.fa']
     cmd = ' '.join(cmd)
-    print('[SEQTK] ' + cmd)
+    print_log('[SEQTK] ' + cmd, options['log'])
     os.system(cmd)
 
     # replace old query with new query
@@ -289,7 +289,7 @@ def dereplicate(query, ref, threads, offset, cigar):
     shutil.move(tmp_header + '_query.fa', query)
     os.remove(tmp_header + '_kplist')
     os.remove(tmp_header + '.paf')
-    print('[DereCo] {0} is dereplicated'.format(query))
+    print_log('[DereCo] {0} is dereplicated'.format(query), options['log'])
 
     return None
 
@@ -318,7 +318,7 @@ def devour(args_input, args_threads, args_offset, args_cigar):
             options = json.load(f)
             options['offset'] = args_offset
             if options['finished']:
-                print('[DeroCo] This directory is marked as FINISHED')
+                print_log('[DeroCo] This directory is marked as FINISHED', options['log'])
                 sys.exit()
             else:
                 flow = []
@@ -329,12 +329,12 @@ def devour(args_input, args_threads, args_offset, args_cigar):
     if options['sig']: check_dependency(['seqtk', 'minimap2', 'sourmash'])
     else: check_dependency(['seqtk', 'minimap2'])
     
-    print('[DereCo] Cutoff: {0}'.format(options['cutoff']))
-    print('[DereCo] Minimum length: {0}'.format(options['minlen']))
-    print('[DereCo] Query length offset: {0}'.format(options['offset']))
+    print_log('[DereCo] Cutoff: {0}'.format(options['cutoff']), options['log'])
+    print_log('[DereCo] Minimum length: {0}'.format(options['minlen']), options['log'])
+    print_log('[DereCo] Query length offset: {0}'.format(options['offset']), options['log'])
     options['cigar'] = args_cigar
-    if options['cigar']: print('[DereCo] Cigar enabled in minimap2')
-    else: print('[DereCo] Cigar disabled in minimap2')   
+    if options['cigar']: print('[DereCo] Cigar enabled in minimap2', options['log'])
+    else: print_log('[DereCo] Cigar disabled in minimap2', options['log'])
 
     # Get the original file size and count
     sum0 = [0,0]
@@ -345,23 +345,23 @@ def devour(args_input, args_threads, args_offset, args_cigar):
     except IndexError:
         sum0[1], c0[1] = 0, 0
     
-    print('[DereCo] FLOW started:')
+    print_log('[DereCo] FLOW started:', options['log'])
     for item in flow:
         query = item[0]
         ref = item[1]
         if not os.path.isfile(query):
-            print('[ERROR] {0} is missing'.format(query))
-            print('[DereCo] EXIT')
+            print_log('[ERROR] {0} is missing'.format(query), options['log'])
+            print_log('[DereCo] EXIT', options['log'])
             sys.exit()
         elif not os.path.isfile(ref):
-            print('[ERROR] {0} is missing'.format(ref))
-            print('[DereCo] EXIT')
+            print_log('[ERROR] {0} is missing'.format(ref), options['log'])
+            print_log('[DereCo] EXIT', options['log'])
             sys.exit()
-        print('[DereCo] FLOW: {0} -> {1}'.format(query, ref))
+        print_log('[DereCo] FLOW: {0} -> {1}'.format(query, ref), options['log'])
         sum_query, count_query = get_size_count(query)
-        dereplicate(query, ref, args_threads, args_offset, args_cigar)
+        dereplicate(query, ref, args_threads, args_offset, args_cigar, options)
         sum1, c1 = get_size_count(query)
-        print('[DereCo] Dereplicated {4}: {0:,} -> {1:,} (bps) / {2:,} -> {3:,} (count)'.format(sum_query, sum1, count_query, c1, query))
+        print_log('[DereCo] Dereplicated {4}: {0:,} -> {1:,} (bps) / {2:,} -> {3:,} (count)'.format(sum_query, sum1, count_query, c1, query), options['log'])
 
     # concat all and rename with prefix nrc_ aka Non-redundant contigs
     cmd = ['cat']
@@ -369,7 +369,7 @@ def devour(args_input, args_threads, args_offset, args_cigar):
     cmd += [options['small_head_dad']]
     cmd += ['| seqtk rename - nrc_ > ' + args_input + 'dereco_final.fa']
     cmd = ' '.join(cmd)
-    print('[SHELL] ' + cmd)
+    print_log('[SHELL] ' + cmd, options['log'])
     os.system(cmd)
 
     options['final'] = args_input + 'dereco_final.fa'
@@ -382,8 +382,8 @@ def devour(args_input, args_threads, args_offset, args_cigar):
         cmd += ['-o ' + args_input + 'minhash_derep.sig']
         cmd += ['2> /dev/null']
         cmd = ' '.join(cmd)
-        print('[DereCo] Calculating minhash sigature for the dereplicated file')
-        print('[SOURMASH] ' + cmd)
+        print_log('[DereCo] Calculating minhash sigature for the dereplicated file', options['log'])
+        print_log('[SOURMASH] ' + cmd, options['log'])
         os.system(cmd)
 
     if os.path.isfile(args_input + 'dereco_final.fa'):
@@ -396,22 +396,22 @@ def devour(args_input, args_threads, args_offset, args_cigar):
     with open(args_input + '.contigs', 'r') as f:
         for line in f:
             count += 1
-    print('\n\t---Report---')
-    print('Number of contigs: {0}'.format(count))
-    print('Compression rate: {0:.2f}'.format(sum(sum0) / (sum1)))
-    print('Origin size / Derep size: {0:,} / {1:,} --> {2:,} bps'.format(sum(sum0), sum1, sum(sum0) - sum1))
-    print('Origin count / Derep count: {0:,} / {1:,} --> {2:,} seqs'.format(sum(c0), c1, sum(c0) - c1))
+    print_log('\n\t---Report---', options['log'])
+    print_log('Number of contigs: {0}'.format(count), options['log'])
+    print_log('Compression rate: {0:.2f}'.format(sum(sum0) / (sum1)), options['log'])
+    print_log('Origin size / Derep size: {0:,} / {1:,} --> {2:,} bps'.format(sum(sum0), sum1, sum(sum0) - sum1), options['log'])
+    print_log('Origin count / Derep count: {0:,} / {1:,} --> {2:,} seqs'.format(sum(c0), c1, sum(c0) - c1), options['log'])
     options['origin_size'] = sum(sum0)
     options['derep_size'] = sum1
     options['origin_count'] = sum(c0)
     options['derep_count'] = c1
     options['cigar'] = args_cigar
     if options['folder']:
-        print('To update: dereco update -i {0} -t [threads]'.format(options['wd']))
+        print_log('To update: dereco update -i {0} -t [threads]'.format(options['wd']), options['log'])
     with open(args_input + 'options.json', 'w') as f:
         json.dump(options, f)
     time_span[1] = time.time()
-    print('[DereCo] Used: {0:,.0f} seconds'.format(time_span[1] - time_span[0]))
+    print_log('[DereCo] Used: {0:,.0f} seconds'.format(time_span[1] - time_span[0]), options['log'])
 
     return None
 
