@@ -95,7 +95,7 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
             sys.exit()
         target_file = args_input
     elif os.path.isdir(args_input):  # Input is a folder
-        folder = True
+        options['folder'] = True
         if not args_input.endswith('/'): args_input += '/'
         print_log('Origin directory: {0}'.format(args_input), options['log'])
         # Search in the target folder for all .fa.gz files, .fa will be ignored
@@ -123,7 +123,7 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
         print_log('Working folder generated at: {0}'.format(args_output), options['log'])
 
 
-    if folder:
+    if options['folder']:
         with open(args_output + '.contigs', 'w') as f:
             for item in fagz:
                f.write('{0}\n'.format(item))
