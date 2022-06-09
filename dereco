@@ -223,7 +223,7 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
     print_log('[DereCo] Generated the SMALL file: {0}'.format(file_small), options['log'])
     print_log('[DereCo] Generated options.jaon', options['log'])
     print_log('[DereCo] Generated FLOW', options['log'])
-    print_log('[DereCo] Next run: dereco calculate -i {0} -t [threads]'.format(args_output), options['log'])
+    print_log('[DereCo] Next run: dereco devour -i {0} -t [threads]'.format(args_output), options['log'])
     time_span[1] = time.time()
     print_log('[DereCo] Used {0:,.0f} seconds'.format(time_span[1] - time_span[0]), options['log'])
 
