@@ -585,7 +585,7 @@ def layout(args_input, args_output, args_threads, args_id, args_match, args_offs
     cmd += ['-t ' + str(args_threads)]
     cmd += [args_input]
     cmd += [args_input]
-    cmd += ['> ' + args_output]
+    cmd += ['> ' + tmp_ovlp]
     cmd = ' '.join(cmd)
     print(cmd)
     os.system(cmd)
