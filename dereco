@@ -609,6 +609,9 @@ def layout(args_input, args_output, args_threads, args_id, args_match, args_offs
     keep_list_file = tmp_header + '_kplist'
     seq_list_file = tmp_header + '_olc'
     c = seqIO.write_seqs(seq_list, seq_list_file, gz=False)
+    with open(keep_list_file, 'w') as f:
+        for item in keep_list:
+            f.write('{0}\n'.format(item))
 
     # Remove ctgs from origin sequence, combined assmebled ctgs with filtered sequences
     print('Write to disks')
@@ -623,7 +626,7 @@ def layout(args_input, args_output, args_threads, args_id, args_match, args_offs
     os.system(cmd)
 
     time_span[1] = time.time()
-    print('[DereCo] Used: {0:,0.f} seconds'.format(time_span[1] - time_span[0]))
+    print('[DereCo] Used: {0:,.0f} seconds'.format(time_span[1] - time_span[0]))
     
     return None
 
