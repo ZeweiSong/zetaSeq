@@ -15,17 +15,18 @@ He who loves to comment his code is unlikely to have bad luck.
 """
 
 import argparse
-import sys
-import os
-import json
-import shutil
-import time
-from zetaSeq import io as seqIO
 import hashlib
+import json
+import os
 import random
+import shutil
 import string
+import sys
+import time
 from datetime import datetime
 
+from zetaSeq import io as seqIO
+from zetaSeq import graph
 
 def print_help():
     print('')
@@ -35,6 +36,7 @@ def print_help():
     print('create     CREATE a working folder from a fromile or files in a directory.')
     print('devour     DEVOUR short sequences into longer ones passing a similarity threshold.')
     print('update     UPDATE a working directory with new files in the target path.')
+    print('layout     LAYOUT graph assembly using all-versus-all overlaps.')
     print('status     Print out the STATUS of a working directory.')
     print('--------------------')
     print('Song, Zewei')
@@ -568,30 +570,55 @@ def status(args_input):
         os.system(cmd)
 
 
-def graph(ava_paf):
-    link = []
-    with open(ava_paf, 'r') as f:
-        for line in f:
-            line = line.strip('\n').split('\t')
-            query = {'name': line[0], 'len':int(line[1]), 'start':int(line[2]), 'end':int(line[3]), 'strand':line[4]}
-            target = {'name':line[5], 'len':int(line[6]), 'start':int(line[7]), 'end':int(line[8])}
-            match = {'match': int(line[9]), 'align': int(line[10])}
-            if query['strand'] == '+':
-                qtail = query['len'] - query['end']
-                ttail = target['start']
-            else:
-                qtail = query['len'] - query['end']
-                ttail = target['len'] - target['end']
-            pident = match['match'] / match['align']
-            if qtail <= 600 and ttail <= 600 and pident >= 0.99:
-                link.append((query['name'], target['name'], queryy['strand']))
-
-    return link
-
-def layout():
+def layout(args_input, args_output, args_threads, args_id, args_match, args_offset):
     time_span = [0, 0]
     time_span[0] = time.time()
+
     # minimap2 ava-ont -c
+    print('Minimap overlap')
+    hash_object = hashlib.md5((args_input+get_random_string(10)).encode())
+    tmp_header = '__tmp__' + hash_object.hexdigest()
+    tmp_ovlp = tmp_header + '_ovlp.paf'
+    cmd = ['minimap2']
+    cmd += ['-x ava-ont']
+    cmd += ['-c']
+    cmd += ['-t ' + str(args_threads)]
+    cmd += [args_input]
+    cmd += [args_input]
+    cmd += ['> ' + args_output]
+    cmd = ' '.join(cmd)
+    print(cmd)
+    os.system(cmd)
+
+    # Overlap layout assemble
+    print('Assembly')
+    ovlp = graph.overlap_list(tmp_ovlp, t=args_offset, id=args_id, m=args_match)
+    g = graph.overlap_layout_graph(ovlp, log=False)
+    g_list = []
+    for item in g:
+        g_list += graph.trim_ovlp_graph(item)
+    print('Total subgraph: {0}'.format(len(g_list)))
+    seq_list = []
+    ovlp_dict = graph.overlap_dict(ovlp)
+    seq_dict = graph.sequence_dict(args_input)
+    for item in g_list:
+        seq_list.append(graph.ovlp_sequence(item, ovlp_dict, seq_dict))
+    rmlist = graph.rmlist_graph(g_list)
+    ctg_list = [i[0] for i in seqIO.sequence(args_input)]
+    keep_list = [i for i in ctg_list if i not in rmlist]
+    keep_list_file = tmp_header + '_kplist'
+    seq_list_file = tmp_header + '_olc'
+    c = seqIO.write_seqs(seq_list, seq_list_file, gz=False)
+
+    # Remove ctgs from origin sequence, combined assmebled ctgs with filtered sequences
+    print('Write to disks')
+    cmd = ['seqtk subseq']
+    cmd += [args_input]
+    cmd += [keep_list_file]
+    cmd += ['| cat -']
+    cmd += [seq_list_file]
+    cmd += ['> ' + args_output]
+
     time_span[1] = time.time()
     print('[DereCo] Used: {0:,0f} seconds'.format(time_span[1] - time_span[0]))
     
@@ -636,6 +663,20 @@ elif option == 'update':
     else:
         args = parser.parse_args(sys.argv[2:])
         update(args.input)
+elif option == 'layout':
+    print('LAYOUT graph assembly using all-versus-all overlaps')
+    parser = argparse.ArgumentParser(prog='dereco layout')
+    parser.add_argument('-i', '--input', help='Path to the input sequence.')
+    parser.add_argument('-o', '--output', help='Path to the assembled sequences.')
+    parser.add_argument('-t', '--threads', type=int, default=2, help='Number of threads.')
+    parser.add_argument('-d', '--id', type=float, default=0.99, help='Identity cutoff for alignments.')
+    parser.add_argument('-m', '--match', type=int, default=2000, help='Minimum overlap length for an alignment.')
+    parser.add_argument('-f', '--offset', type=int, default=300, help='Maximum tail offset for an overlap.')
+    if len(sys.argv[:]) == 2:
+        parser.print_help()
+    else:
+        args = parser.parse_args(sys.argv[2:])
+        layout(args.input, args.output, args.threads, args.id, args.match, args.offset)
 elif option in ('status', 'stat'):
     print('STATUS of a working directory')
     parser = argparse.ArgumentParser(prog='dereco status')
