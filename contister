@@ -19,7 +19,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-i', '--input', help='Path to the input FASTA file.')
 parser.add_argument('-o', '--output', default='assembly_stats.json', help='Path to the output JSON file.')
 parser.add_argument('-m', '--min_length', type=int, default=1, help='Minimum length included, Default = 1 bp')
-parser.add_argument('-s', 'suppress', action='store_true', help='Supress the std output.')
+parser.add_argument('-s', '--suppress', action='store_true', help='Supress the std output.')
 args = parser.parse_args()
 input_file = args.input
 output_file = args.output
@@ -69,12 +69,12 @@ for index, seq in enumerate(fasta_len):
     
     # N50 and L50 and exit
     if sum_length >= N50_threshold:
-        report['N50'].append(seq)
-        report['L50'].append(index + 1)
+        report['N50'] = seq
+        report['L50'] =index + 1
         break
 
 # Print to screen
-if args.supress:
+if args.suppress:
     pass
 else:
     print('Assembly stats of {0}'.format(input_file))
