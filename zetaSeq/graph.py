@@ -245,7 +245,7 @@ def ovlp_sequence(g, ovlp_dict, seq_dict):
         label += ':' + next_node[0] + '[' + next_node[1] + ']'
         current_seq = next_sequence(current_seq, current_node, next_node, ovlp_dict, seq_dict)
         current_node = next_node
-    return (label, current_seq)
+    return [label, current_seq]
 
 
 # Build an overlap layouot graph with a given overlap_list from overlap_list()
@@ -325,7 +325,15 @@ def overlap_layout_graph(ovlp, log=False):
             if log: print('Added nodes this round: {0}'.format(last_added_nodes))
         if log: print('{0} graphs so far'.format(len(g_list)))
 
-    return g_list
+    # Assign subgraphs to DAGs and DCGs
+    g_dict = {'dag':[], 'dcg':[]}
+    for item in g_list:
+        if nx.is_directed_acyclic_graph(item):
+            g_dict['dag'].append(item)
+        else:
+            g_dict['dcg'].append(item)
+
+    return g_dict
 
 
 # trim the overlap_layout graph: Given a DiGraph, return a list of graph trimmed
@@ -334,14 +342,14 @@ def trim_ovlp_graph(g):
     g = reduce_graph(g)
     g = remove_branch_edges(g)
     g = subgraph(g)
-    g_list = []
+    g_dict = {'dag':[], 'dcg':[]}  # a dictionary with DAG and DCG for acyclic and cyclic graphs
     for item in g:
-        if nx.is_directed_acyclic_graph(item):  # if the subgraph is a DAG
-            g_list.append(item)
+        if nx.is_directed_acyclic_graph(item) and len(item.nodes) > 1:  # if the subgraph is a DAG
+            g_dict['dag'].append(item)
         else:  # Or otherwise it is a cycle or more
             item = remove_branch_edges(item)  # trim the cycle first
-            if nx.is_directed_acyclic_graph(item):  # If trim change it to DAG
-                g_list.append(reduce_graph(item))
+            if nx.is_directed_acyclic_graph(item) and len(item.nodes) > 1:  # If trim change it to DAG
+                g_dict['dag'].append(reduce_graph(item))
             else:  # Still a cycle, return one cycle with longest path
                 cycles = list(nx.simple_cycles(item))
                 cycles.sort(key=lambda z: len(z), reverse=True)
@@ -349,8 +357,9 @@ def trim_ovlp_graph(g):
                 x = nx.DiGraph()  # A new DAG for the broken cycle
                 for i in range(0, len(c1) - 1, 1):
                     x.add_edge(c1[i], c1[i + 1])
-                g_list.append(x)
-    return g_list
+                if len(x.nodes) > 1:
+                    g_dict['dcg'].append(x)
+    return g_dict
 
 
 # Return a list of node names to be removed from origin sequences
@@ -361,3 +370,20 @@ def rmlist_graph(g):
             rmlist.append(node[0])
     rmlist = set(rmlist)
     return rmlist
+
+
+# Convert a list of graphs into a GFA format output
+def graph_to_gfa(g_dict, seqs):
+    segment = []
+    linker = []
+    seq_len = {i[0]:len(i[1]) for i in seqIO.sequence(seqs)}
+    for item in g_dict['dag'] + g_dict['dcg']:
+        for node in item.nodes:
+            segment.append(node[0])
+        for edge in item.edges:
+            output_line = ['L', edge[0][0], edge[0][1], edge[1][0], edge[1][1], str(item[edge[0]][edge[1]]['match'])]
+    segment = list(set(segment))
+    segment = [['S', i, '*', 'LN:i:' + str(seq_len[i])] for i in segment]
+    segment.sort()
+    linker.sort()
+    return segment + linker

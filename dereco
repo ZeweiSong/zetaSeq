@@ -570,60 +570,117 @@ def status(args_input):
         os.system(cmd)
 
 
-def layout(args_input, args_output, args_threads, args_id, args_match, args_offset):
+def layout(args_input, args_output, args_threads, args_min_len, args_id, args_match, args_offset):
     time_span = [0, 0]
     time_span[0] = time.time()
 
-    # minimap2 ava-ont -c
-    print('Minimap overlap')
+    # Check options.json
+    if os.path.isfile(args_input + 'options.json'):
+        with open(args_input + 'options.json', 'r') as f:
+            options = json.load(f)
+    else:
+        print('[ERROR] options.json is missing in {0}'.format(args_input))
+        print('[DereCo] EXIT')
+        sys.exit()
+    check_dependency(['seqtk', 'minimap2'])
+
+    # Initiate the log file
+    print_log('[DereCo] LAYOUT: overlap LAYOUT assembly of a dereplicated dataset', options['log'])
     hash_object = hashlib.md5((args_input+get_random_string(10)).encode())
     tmp_header = '__tmp__' + hash_object.hexdigest()
+
+    # Cut the input at the minimum length
+    print_log('[DereCo] Cut {0} at minimum length {1}'.format(args_input, args_min_len), options['log'])
+    tmp_cutlen = tmp_header + '_minlen.fa'
+    cmd = ['seqtk seq']
+    cmd += ['-L ' + str(args_min_len)]
+    cmd += [options['final']]
+    cmd += ['> ' + tmp_cutlen]
+    cmd = ' '.join(cmd)
+    print_log('[SEQTK] ' + cmd, options['log'])
+    os.system(cmd)
+
+    # minimap2 ava-ont -c
+    print_log('[DereCo] Minimap2 all-versus-all alignment', options['log'])
     tmp_ovlp = tmp_header + '_ovlp.paf'
     cmd = ['minimap2']
     cmd += ['-x ava-ont']
     cmd += ['-c']
     cmd += ['-t ' + str(args_threads)]
-    cmd += [args_input]
-    cmd += [args_input]
+    cmd += [tmp_cutlen]
+    cmd += [tmp_cutlen]
     cmd += ['> ' + tmp_ovlp]
     cmd = ' '.join(cmd)
-    print(cmd)
+    print_log('[MINIMAP2] ' + cmd, options['log'])
     os.system(cmd)
+    os.remove(tmp_cutlen)
 
     # Overlap layout assemble
-    print('Assembly')
+    print_log('[DereCo] Overlap layout assembly', options['log'])
+    print_log('[DereCo] LAYOUT: tail offset = {0}, alignment ident = {1}, match length = {2}'
+              .format(args_offset, args_id, args_match))
     ovlp = graph.overlap_list(tmp_ovlp, t=args_offset, id=args_id, m=args_match)
+    print_log('DereCo] Loaded {0} all-versus-all align events'.format(len(ovlp)), options['log'])
     g = graph.overlap_layout_graph(ovlp, log=False)
-    g_list = []
-    for item in g:
-        g_list += graph.trim_ovlp_graph(item)
-    print('Total subgraph: {0}'.format(len(g_list)))
-    seq_list = []
+    print_log('[DereCo] Overlaps assembled into {0] subgraphs, DAGs: {1}, DCGs: {2}'
+              .format(len(g['dag']) + len(g['gcg']), len(g['dag']), len(g['dcg'])), options['log'])
+    g_trim = {'dag':[], 'dcg':[]}  # a new list for saving trimmed subgraphs, may be longer than variable g
+    for item in g['dag']:
+        g_tmp = graph.trim_ovlp_graph(item)
+        g_trim['dag'] += g_tmp['dag']
+        g_trim['dcg'] += g_tmp['dcg']
+    for item in g['dcg']:
+        g_tmp = graph.trim_ovlp_graph(item)
+        g_trim['dag'] += g_tmp['dag']
+        g_trim['dcg'] += g_tmp['dcg']
+    print_log('[DereCo] Graph reduce and remove into {0] subgraphs, DAGs: {1}, DCGs: {2}'
+              .format(len(g['dag']) + len(g['gcg']), len(g['dag']), len(g['dcg'])), options['log'])
+
     ovlp_dict = graph.overlap_dict(ovlp)
-    seq_dict = graph.sequence_dict(args_input)
-    for item in g_list:
-        seq_list.append(graph.ovlp_sequence(item, ovlp_dict, seq_dict))
-    rmlist = graph.rmlist_graph(g_list)
-    ctg_list = [i[0] for i in seqIO.sequence(args_input)]
-    keep_list = [i for i in ctg_list if i not in rmlist]
-    keep_list_file = tmp_header + '_kplist'
-    seq_list_file = tmp_header + '_olc'
-    c = seqIO.write_seqs(seq_list, seq_list_file, gz=False)
+    seq_dict = graph.sequence_dict(options['final'])
+    count = 0
+    for item in g_trim['dag']:
+        seq = graph.ovlp_sequence(item, ovlp_dict, seq_dict)
+        seq[0] = 'dag_' + str(count) + ';' + seq[0]
+        seq_dict['dag'].append(seq)
+        count += 1
+    count = 0
+    for item in g_trim['dcg']:
+        seq = graph.ovlp_sequence(item, ovlp_dict, seq_dict)
+        seq[0] = 'dcg_' + str(count) + ';' + seq[0]
+        seq_dict['dcg'].append(seq)
+        count += 1
+
+    # Remove ctgs from origin sequence
+    rmlist = graph.rmlist_graph(g_trim['dag'] + g_trim['dcg'])  # sequences to be removed
+    ctg_list = [i[0] for i in seqIO.sequence(options['final'])]  # origin contig names
+    keep_list = [i for i in ctg_list if i not in rmlist]  # sequences to be kept
+    keep_list_file = tmp_header + '_kplist'  # Write to the keep list file
     with open(keep_list_file, 'w') as f:
         for item in keep_list:
             f.write('{0}\n'.format(item))
-
-    # Remove ctgs from origin sequence, combined assmebled ctgs with filtered sequences
-    print('Write to disks')
+    print_log('[DereCo] Write {0} unassembled sequences'.format(len(keep_list)), options['log'])
     cmd = ['seqtk subseq']
     cmd += [args_input]
     cmd += [keep_list_file]
-    cmd += ['| cat -']
-    cmd += [seq_list_file]
-    cmd += ['> ' + args_output]
+    cmd += ['> ' + args_output + 'dereco_final.unassembled.fa']
     cmd = ' '.join(cmd)
-    print(cmd)
+    print_log('[SEQTK] ' + cmd, options['log'])
     os.system(cmd)
+
+    # Write trimmed sub-graphs to FASTA files
+    c_dag = seqIO.write_seqs(seq_dict['dag'], args_output + 'dereco_final.dag.fa')
+    c_dcg = seqIO.write_seqs(seq_dict['dcg'], args_output + 'dereco_final.dcg.fa')
+
+    # Write origin graphs and trimmed graphs to GFA format
+    gfa_origin = graph.graph_to_gfa(g['dag'] + g['dcg'], options['final'])
+    gfa_trimmed = graph.graph_to_gfa(g_trim['dag'] + g_trim['dcg'], options['final'])
+    with open(args_input + 'dereco_final.origin.gfa', 'w') as f:
+        for line in gfa_origin:
+            f.write('{0}/n'.format('\t'.join(line)))
+    with open(args_input + 'dereco_final.trimmed.gfa', 'w') as f:
+        for line in gfa_trimmed:
+            f.write('{0}/n'.format('\t'.join(line)))
 
     time_span[1] = time.time()
     print('[DereCo] Used: {0:,.0f} seconds'.format(time_span[1] - time_span[0]))
@@ -672,7 +729,7 @@ elif option == 'update':
 elif option == 'layout':
     print('LAYOUT graph assembly using all-versus-all overlaps')
     parser = argparse.ArgumentParser(prog='dereco layout')
-    parser.add_argument('-i', '--input', help='Path to the input sequence.')
+    parser.add_argument('-i', '--input', help='Path to the input directory containing dereplicated contigs.')
     parser.add_argument('-o', '--output', help='Path to the output directory.')
     parser.add_argument('-t', '--threads', type=int, default=2, help='Number of threads.')
     parser.add_argument('-l', '--min_len', type=int, default=5000, help='Minimum length to cut for entering the all-vs-all alignment.')
@@ -683,7 +740,7 @@ elif option == 'layout':
         parser.print_help()
     else:
         args = parser.parse_args(sys.argv[2:])
-        layout(args.input, args.output, args.threads, args.id, args.match, args.offset)
+        layout(args.input, args.output, args.threads, args.min_len, args.id, args.match, args.offset)
 elif option in ('status', 'stat'):
     print('STATUS of a working directory')
     parser = argparse.ArgumentParser(prog='dereco status')
