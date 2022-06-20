@@ -571,8 +571,33 @@ def status(args_input):
 
 
 def layout(args_input, args_output, args_threads, args_min_len, args_id, args_match, args_offset):
-    time_span = [0, 0]
+    # Create an option dictionary
+    options = {'cutoff': 0, 'minlen': 0, 'ava_minlen': args_min_len
+               'target': args_input, 'wd': args_output,
+               'folder': False, 'final': '', 'finished': False,
+               'threads': 1, 'cigar': False,
+               'origin_size': 0, 'derep_size': 0,
+               'origin_count': 0, 'origin_count': 0,
+               'sig': False, 'log': args_output + 'log',
+               'big_head_son': '', 'small_head_dad': ''}
+
+    time_span = [0, 0]  # Time recorder
     time_span[0] = time.time()
+
+    # Check if the output folder exist
+    if not args_output.endswith('/'): args_output += '/'
+    if os.path.isdir(args_output):
+        print('[ERROR] The output folder {0} already exist, please check it.'.format(args_output))
+        sys.exit()
+    else:
+        os.mkdir(args_output)
+        print('Working folder generated at: {0}'.format(args_output))
+
+    # Create an empty log file
+    with open(options['log'], 'w') as f:
+        pass
+    # Initiate the log file
+    print_log('Dereco: dereplicate a group of contigs', options['log'])
 
     # Check options.json
     if os.path.isfile(args_input + 'options.json'):
@@ -594,7 +619,7 @@ def layout(args_input, args_output, args_threads, args_min_len, args_id, args_ma
     tmp_cutlen = tmp_header + '_minlen.fa'
     cmd = ['seqtk seq']
     cmd += ['-L ' + str(args_min_len)]
-    cmd += [options['final']]
+    cmd += [options['target']]
     cmd += ['> ' + tmp_cutlen]
     cmd = ' '.join(cmd)
     print_log('[SEQTK] ' + cmd, options['log'])
@@ -637,7 +662,7 @@ def layout(args_input, args_output, args_threads, args_min_len, args_id, args_ma
               .format(len(g['dag']) + len(g['gcg']), len(g['dag']), len(g['dcg'])), options['log'])
 
     ovlp_dict = graph.overlap_dict(ovlp)
-    seq_dict = graph.sequence_dict(options['final'])
+    seq_dict = graph.sequence_dict(options['target'])
     count = 0
     for item in g_trim['dag']:
         seq = graph.ovlp_sequence(item, ovlp_dict, seq_dict)
