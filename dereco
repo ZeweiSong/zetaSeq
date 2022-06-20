@@ -654,7 +654,7 @@ def layout(args_input, args_output, args_threads, args_min_len, args_id, args_ma
     else:
         print_log('[DereCo] Loaded {0} all-versus-all align events'.format(len(ovlp)), options['log'])
     g = graph.overlap_layout_graph(ovlp, log=False)
-    print_log('[DereCo] Overlaps assembled into {0] subgraphs, DAGs: {1}, DCGs: {2}'
+    print_log('[DereCo] Overlaps assembled into {0} subgraphs, DAGs: {1}, DCGs: {2}'
               .format(len(g['dag']) + len(g['dcg']), len(g['dag']), len(g['dcg'])), options['log'])
     g_trim = {'dag':[], 'dcg':[]}  # a new list for saving trimmed subgraphs, may be longer than variable g
     for item in g['dag']:
