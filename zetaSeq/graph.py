@@ -338,27 +338,35 @@ def overlap_layout_graph(ovlp, log=False):
 
 # trim the overlap_layout graph: Given a DiGraph, return a list of graph trimmed
 # If the resulting graph is cyclic, turn it into acyclic
-def trim_ovlp_graph(g):
-    g = reduce_graph(g)
+def trim_ovlp_graph(og):
+    g = reduce_graph(og)  # og is a DiGraph() object, g is a DiGraph() object
     g = remove_branch_edges(g)
-    g = subgraph(g)
+    g = subgraph(g)  # g became a list of DiGraph() objects
     g_dict = {'dag':[], 'dcg':[]}  # a dictionary with DAG and DCG for acyclic and cyclic graphs
     for item in g:
-        if nx.is_directed_acyclic_graph(item) and len(item.nodes) > 1:  # if the subgraph is a DAG
-            g_dict['dag'].append(item)
-        else:  # Or otherwise it is a cycle or more
-            item = remove_branch_edges(item)  # trim the cycle first
-            if nx.is_directed_acyclic_graph(item) and len(item.nodes) > 1:  # If trim change it to DAG
-                g_dict['dag'].append(reduce_graph(item))
-            else:  # Still a cycle, return one cycle with longest path
-                cycles = list(nx.simple_cycles(item))
-                cycles.sort(key=lambda z: len(z), reverse=True)
-                c1 = cycles[0]  # the longest cycle
-                x = nx.DiGraph()  # A new DAG for the broken cycle
-                for i in range(0, len(c1) - 1, 1):
-                    x.add_edge(c1[i], c1[i + 1])
-                if len(x.nodes) > 1:
-                    g_dict['dcg'].append(x)
+        if len(item.nodes) > 1:
+            if nx.is_directed_acyclic_graph(item):  # if the subgraph is a DAG
+                g_dict['dag'].append(item)
+            else:  # Or otherwise it is a cycle or more
+                item = subgraph(remove_branch_edges(item))  # trim the cycle first, item --> list
+                for sg in item:
+                    if nx.is_directed_acyclic_graph(sg):  # If trim change it to DAG
+                        g_dict['dag'].append(reduce_graph(sg))
+                    else:  # Still a cycle, return one cycle with longest path
+                        cycles = list(nx.simple_cycles(sg))
+                        cycles.sort(key=lambda z: len(z), reverse=True)
+                        c1 = cycles[0]  # the longest cycle
+                        x = nx.DiGraph()  # A new DAG for the broken cycle
+                        for i in range(0, len(c1) - 1, 1):
+                            x.add_edge(c1[i], c1[i + 1])
+                        if len(x.nodes) > 1:
+                            g_dict['dcg'].append(x)
+    for item in g_dict['dag']:
+        item.add_nodes_from(og.nodes(data=True))
+        item.add_edges_from((u, v, og.edges[u, v]) for u, v in item.edges)
+    for item in g_dict['dcg']:
+        item.add_nodes_from(og.nodes(data=True))
+        item.add_edges_from((u, v, og.edges[u, v]) for u, v in item.edges)
     return g_dict
 
 
