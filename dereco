@@ -669,18 +669,19 @@ def layout(args_input, args_output, args_threads, args_min_len, args_id, args_ma
               .format(len(g['dag']) + len(g['dcg']), len(g['dag']), len(g['dcg'])), options['log'])
 
     ovlp_dict = graph.overlap_dict(ovlp)
-    seq_dict = graph.sequence_dict(options['target'])
+    seq_dict = {graph.sequence_dict(options['target'])}
+    seq_assem = {'dag':[], 'dcg':[]}
     count = 0
     for item in g_trim['dag']:
         seq = graph.ovlp_sequence(item, ovlp_dict, seq_dict)
         seq[0] = 'dag_' + str(count) + ';' + seq[0]
-        seq_dict['dag'].append(seq)
+        seq_assem['dag'].append(seq)
         count += 1
     count = 0
     for item in g_trim['dcg']:
         seq = graph.ovlp_sequence(item, ovlp_dict, seq_dict)
         seq[0] = 'dcg_' + str(count) + ';' + seq[0]
-        seq_dict['dcg'].append(seq)
+        seq_assem['dcg'].append(seq)
         count += 1
 
     # Remove ctgs from origin sequence
@@ -701,12 +702,12 @@ def layout(args_input, args_output, args_threads, args_min_len, args_id, args_ma
     os.system(cmd)
 
     # Write trimmed sub-graphs to FASTA files
-    c_dag = seqIO.write_seqs(seq_dict['dag'], args_output + 'dereco_final.dag.fa')
-    c_dcg = seqIO.write_seqs(seq_dict['dcg'], args_output + 'dereco_final.dcg.fa')
+    c_dag = seqIO.write_seqs(seq_assem['dag'], args_output + 'dereco_final.dag.fa')
+    c_dcg = seqIO.write_seqs(seq_assem['dcg'], args_output + 'dereco_final.dcg.fa')
 
     # Write origin graphs and trimmed graphs to GFA format
-    gfa_origin = graph.graph_to_gfa(g['dag'] + g['dcg'], options['final'])
-    gfa_trimmed = graph.graph_to_gfa(g_trim['dag'] + g_trim['dcg'], options['final'])
+    gfa_origin = graph.graph_to_gfa(g['dag'] + g['dcg'], options['target'])
+    gfa_trimmed = graph.graph_to_gfa(g_trim['dag'] + g_trim['dcg'], options['target'])
     with open(args_input + 'dereco_final.origin.gfa', 'w') as f:
         for line in gfa_origin:
             f.write('{0}/n'.format('\t'.join(line)))
