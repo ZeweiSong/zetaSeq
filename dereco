@@ -647,7 +647,12 @@ def layout(args_input, args_output, args_threads, args_min_len, args_id, args_ma
     print_log('[DereCo] LAYOUT: tail offset = {0}, alignment ident = {1}, match length = {2}'
               .format(args_offset, args_id, args_match), options['log'])
     ovlp = graph.overlap_list(tmp_ovlp, t=args_offset, id=args_id, m=args_match)
-    print_log('DereCo] Loaded {0} all-versus-all align events'.format(len(ovlp)), options['log'])
+    if len(ovlp) == 0:
+        print_log('ERROR] Did not find significant overlap, you may want to change the matching parameters', options['log'])
+        print_log('[DereCo] EXIT')
+        sys.exit()
+    else:
+        print_log('[DereCo] Loaded {0} all-versus-all align events'.format(len(ovlp)), options['log'])
     g = graph.overlap_layout_graph(ovlp, log=False)
     print_log('[DereCo] Overlaps assembled into {0] subgraphs, DAGs: {1}, DCGs: {2}'
               .format(len(g['dag']) + len(g['gcg']), len(g['dag']), len(g['dcg'])), options['log'])
