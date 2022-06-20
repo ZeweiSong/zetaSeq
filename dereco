@@ -592,6 +592,8 @@ def layout(args_input, args_output, args_threads, args_min_len, args_id, args_ma
     else:
         os.mkdir(args_output)
         print('Working folder generated at: {0}'.format(args_output))
+        with open(args_output + 'options.json', 'w') as f:
+            json.dump(options, f)
 
     # Create an empty log file
     with open(options['log'], 'w') as f:
@@ -600,8 +602,8 @@ def layout(args_input, args_output, args_threads, args_min_len, args_id, args_ma
     print_log('Dereco: dereplicate a group of contigs', options['log'])
 
     # Check options.json
-    if os.path.isfile(args_input + 'options.json'):
-        with open(args_input + 'options.json', 'r') as f:
+    if os.path.isfile(args_output + 'options.json'):
+        with open(args_output + 'options.json', 'r') as f:
             options = json.load(f)
     else:
         print('[ERROR] options.json is missing in {0}'.format(args_input))
