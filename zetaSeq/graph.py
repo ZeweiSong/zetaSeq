@@ -394,7 +394,7 @@ def graph_to_gfa(g_list, seqs):
         for node in item.nodes:
             segment.append(node[0])
         for edge in item.edges:
-            output_line = ['L', edge[0][0], edge[0][1], edge[1][0], edge[1][1], str(item[edge[0]][edge[1]]['match'])]
+            output_line = ['L', edge[0][0], edge[0][1], edge[1][0], edge[1][1], str(item[edge[0]][edge[1]]['match']) + 'M']
             linker.append(output_line)
     segment = list(set(segment))
     segment = [['S', i, '*', 'LN:i:' + str(seq_len[i])] for i in segment]
