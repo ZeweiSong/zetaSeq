@@ -666,7 +666,7 @@ def layout(args_input, args_output, args_threads, args_min_len, args_id, args_ma
         g_trim['dag'] += g_tmp['dag']
         g_trim['dcg'] += g_tmp['dcg']
     print_log('[DereCo] Graph reduce and remove into {0] subgraphs, DAGs: {1}, DCGs: {2}'
-              .format(len(g['dag']) + len(g['gcg']), len(g['dag']), len(g['dcg'])), options['log'])
+              .format(len(g['dag']) + len(g['dcg']), len(g['dag']), len(g['dcg'])), options['log'])
 
     ovlp_dict = graph.overlap_dict(ovlp)
     seq_dict = graph.sequence_dict(options['target'])
