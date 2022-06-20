@@ -343,6 +343,7 @@ def trim_ovlp_graph(og):
     g = remove_branch_edges(g)
     g = subgraph(g)  # g became a list of DiGraph() objects
     g_dict = {'dag':[], 'dcg':[]}  # a dictionary with DAG and DCG for acyclic and cyclic graphs
+    g_dict_value = {'dag':[], 'dcg':[]}  # a dictionary with DAG and DCG for acyclic and cyclic graphs
     for item in g:
         if len(item.nodes) > 1:
             if nx.is_directed_acyclic_graph(item):  # if the subgraph is a DAG
@@ -362,12 +363,16 @@ def trim_ovlp_graph(og):
                         if len(x.nodes) > 1:
                             g_dict['dcg'].append(x)
     for item in g_dict['dag']:
-        item.add_nodes_from(og.nodes(data=True))
-        item.add_edges_from((u, v, og.edges[u, v]) for u, v in item.edges)
+        v = item.copy()
+        v.add_nodes_from(og.nodes(data=True))
+        v.add_edges_from((u, v, og.edges[u, v]) for u, v in v.edges)
+        g_dict_value['dag'].append(v)
     for item in g_dict['dcg']:
-        item.add_nodes_from(og.nodes(data=True))
-        item.add_edges_from((u, v, og.edges[u, v]) for u, v in item.edges)
-    return g_dict
+        v = item.copy()
+        v.add_nodes_from(og.nodes(data=True))
+        v.add_edges_from((u, v, og.edges[u, v]) for u, v in v.edges)
+        g_dict_value['dcg'].append(v)
+    return g_dict_value
 
 
 # Return a list of node names to be removed from origin sequences
