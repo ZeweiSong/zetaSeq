@@ -669,7 +669,7 @@ def layout(args_input, args_output, args_threads, args_min_len, args_id, args_ma
               .format(len(g['dag']) + len(g['dcg']), len(g['dag']), len(g['dcg'])), options['log'])
 
     ovlp_dict = graph.overlap_dict(ovlp)
-    seq_dict = {graph.sequence_dict(options['target'])}
+    seq_dict = graph.sequence_dict(options['target'])
     seq_assem = {'dag':[], 'dcg':[]}
     count = 0
     for item in g_trim['dag']:
