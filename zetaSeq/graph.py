@@ -373,15 +373,16 @@ def rmlist_graph(g):
 
 
 # Convert a list of graphs into a GFA format output
-def graph_to_gfa(g_dict, seqs):
+def graph_to_gfa(g_list, seqs):
     segment = []
     linker = []
     seq_len = {i[0]:len(i[1]) for i in seqIO.sequence(seqs)}
-    for item in g_dict['dag'] + g_dict['dcg']:
+    for item in g_list:
         for node in item.nodes:
             segment.append(node[0])
         for edge in item.edges:
             output_line = ['L', edge[0][0], edge[0][1], edge[1][0], edge[1][1], str(item[edge[0]][edge[1]]['match'])]
+            linker.append(output_line)
     segment = list(set(segment))
     segment = [['S', i, '*', 'LN:i:' + str(seq_len[i])] for i in segment]
     segment.sort()
