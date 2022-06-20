@@ -572,7 +572,7 @@ def status(args_input):
 
 def layout(args_input, args_output, args_threads, args_min_len, args_id, args_match, args_offset):
     # Create an option dictionary
-    options = {'cutoff': 0, 'minlen': 0, 'ava_minlen': args_min_len
+    options = {'cutoff': 0, 'minlen': 0, 'ava_minlen': args_min_len,
                'target': args_input, 'wd': args_output,
                'folder': False, 'final': '', 'finished': False,
                'threads': 1, 'cigar': False,
