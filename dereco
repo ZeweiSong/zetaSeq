@@ -571,19 +571,6 @@ def status(args_input):
 
 
 def layout(args_input, args_output, args_threads, args_min_len, args_id, args_match, args_offset):
-    # Create an option dictionary
-    options = {'cutoff': 0, 'minlen': 0, 'ava_minlen': args_min_len,
-               'target': args_input, 'wd': args_output,
-               'folder': False, 'final': '', 'finished': False,
-               'threads': 1, 'cigar': False,
-               'origin_size': 0, 'derep_size': 0,
-               'origin_count': 0, 'origin_count': 0,
-               'sig': False, 'log': args_output + 'log',
-               'big_head_son': '', 'small_head_dad': ''}
-
-    time_span = [0, 0]  # Time recorder
-    time_span[0] = time.time()
-
     # Check if the output folder exist
     if not args_output.endswith('/'): args_output += '/'
     if os.path.isdir(args_output):
@@ -592,14 +579,25 @@ def layout(args_input, args_output, args_threads, args_min_len, args_id, args_ma
     else:
         os.mkdir(args_output)
         print('Working folder generated at: {0}'.format(args_output))
+        # Create an option dictionary
+        options = {'cutoff': 0, 'minlen': 0, 'ava_minlen': args_min_len,
+                   'target': args_input, 'wd': args_output,
+                   'folder': False, 'final': '', 'finished': False,
+                   'threads': 1, 'cigar': False,
+                   'origin_size': 0, 'derep_size': 0,
+                   'origin_count': 0, 'origin_count': 0,
+                   'sig': False, 'log': args_output + 'log',
+                   'big_head_son': '', 'small_head_dad': ''}
         with open(args_output + 'options.json', 'w') as f:
             json.dump(options, f)
+        # Create an empty log file
+        with open(options['log'], 'w') as f:
+            pass
+        # Initiate the log file
+        print_log('Dereco: dereplicate a group of contigs', options['log'])
 
-    # Create an empty log file
-    with open(options['log'], 'w') as f:
-        pass
-    # Initiate the log file
-    print_log('Dereco: dereplicate a group of contigs', options['log'])
+    time_span = [0, 0]  # Time recorder
+    time_span[0] = time.time()
 
     # Check options.json
     if os.path.isfile(args_output + 'options.json'):
@@ -611,7 +609,7 @@ def layout(args_input, args_output, args_threads, args_min_len, args_id, args_ma
         sys.exit()
     check_dependency(['seqtk', 'minimap2'])
 
-    # Initiate the log file
+    # Generate the random tmp file header
     print_log('[DereCo] LAYOUT: overlap LAYOUT assembly of a dereplicated dataset', options['log'])
     hash_object = hashlib.md5((args_input+get_random_string(10)).encode())
     tmp_header = '__tmp__' + hash_object.hexdigest()
