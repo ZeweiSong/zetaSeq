@@ -656,11 +656,13 @@ def layout(args_input, args_output, args_threads, args_min_len, args_id, args_ma
               .format(len(g['dag']) + len(g['dcg']), len(g['dag']), len(g['dcg'])), options['log'])
     g_trim = {'dag':[], 'dcg':[]}  # a new list for saving trimmed subgraphs, may be longer than variable g
     for item in g['dag']:
-        g_tmp = graph.trim_ovlp_graph(item)
+        v = item.copy()
+        g_tmp = graph.trim_ovlp_graph(v)
         g_trim['dag'] += g_tmp['dag']
         g_trim['dcg'] += g_tmp['dcg']
     for item in g['dcg']:
-        g_tmp = graph.trim_ovlp_graph(item)
+        v = item.copy()
+        g_tmp = graph.trim_ovlp_graph(v)
         g_trim['dag'] += g_tmp['dag']
         g_trim['dcg'] += g_tmp['dcg']
     print_log('[DereCo] Graph reduce and remove into {0} subgraphs, DAGs: {1}, DCGs: {2}'
