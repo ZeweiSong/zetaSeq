@@ -149,9 +149,9 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
         cmd += ['> ' + args_output + '_tmp.cat.fa.gz']
         target_file = args_output + '_tmp.cat.fa.gz'
         cmd = ' '.join(cmd)
-        if len(fagz) >= 10:
+        if len(fagz) > 10:
             print_log('[DereCo] Concatenate {0} files ...'.format(len(fagz)), options['log'])
-            print_log('[SHELL ] cat ' + ' '.join(fagz[:8]) + ' ... ' + fagz[10] + ' > ' + args_output + '_tmp.cat.fa.gz', options['log']) 
+            print_log('[SHELL ] cat ' + ' '.join(fagz[:6]) + ' ... ' + fagz[-1] + ' > ' + args_output + '_tmp.cat.fa.gz', options['log']) 
         else:
             print_log('[SHELL] ' + cmd, options['log'])
         os.system(cmd)
