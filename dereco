@@ -264,7 +264,7 @@ def dereplicate(query, ref, threads, offset, cigar, options, pident, pmatch):
     os.system(cmd)
 
     # dereplicate query against ref
-    removal = derep_paf(tmp_header + '.paf', offset, pident pmatch)
+    removal = derep_paf(tmp_header + '.paf', offset, pident, pmatch)
     if len(removal) > 0:
         rm_names = set([x[0] for x in removal])
         rm_bps = sum([x[1] for x in removal])
