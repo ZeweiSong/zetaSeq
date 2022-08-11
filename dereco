@@ -233,7 +233,7 @@ def create(args_input, args_output, args_cutoff, args_minlen, args_sourmash):
 
 
 # retuen a list of query names to be removed from alignments
-def derep_paf(input_paf, offset):
+def derep_paf(input_paf, offset, pident=0.99, pmatch=0.97):
     removal = []
     with open(input_paf, 'r') as f:
         for line in f:
@@ -241,13 +241,13 @@ def derep_paf(input_paf, offset):
             if line[0] != line[5] and int(line[1]) < int(line[6]):  # alignment is short --> long
                 ident = float(int(line[10]) / int(line[9]))  # This is the identity (similarity) of the alignment
                 match = float(int(line[10]) / (int(line[1]) - offset))  # This is the percent of length matched on query
-                if ident >= 0.99 and match >= 0.97:
+                if ident >= pident and match >= pmatch:
                     removal.append((line[0], int(line[1])))
         removal = set(removal)
     return removal
 
 # Dereplicate a query file against the ref file
-def dereplicate(query, ref, threads, offset, cigar, options):
+def dereplicate(query, ref, threads, offset, cigar, options, pident, pmatch):
     # minimap2 asm5 ref query
     hash_object = hashlib.md5((query+ref+get_random_string(10)).encode())
     tmp_header = '__tmp__' + hash_object.hexdigest()
@@ -264,7 +264,7 @@ def dereplicate(query, ref, threads, offset, cigar, options):
     os.system(cmd)
 
     # dereplicate query against ref
-    removal = derep_paf(tmp_header + '.paf', offset)
+    removal = derep_paf(tmp_header + '.paf', offset, pident pmatch)
     if len(removal) > 0:
         rm_names = set([x[0] for x in removal])
         rm_bps = sum([x[1] for x in removal])
@@ -304,7 +304,7 @@ def get_size_count(input_seqs):
     return size, count
 
 
-def devour(args_input, args_threads, args_offset, args_cigar):
+def devour(args_input, args_threads, args_offset, args_cigar, args_ident, args_match):
     hash_object = hashlib.md5((args_input+get_random_string(10)).encode())
     tmp_header = '__tmp__' + hash_object.hexdigest()
     time_span = [0, 0]
@@ -361,7 +361,7 @@ def devour(args_input, args_threads, args_offset, args_cigar):
             sys.exit()
         print_log('[DereCo] FLOW: {0} -> {1}'.format(query, ref), options['log'])
         sum_query, count_query = get_size_count(query)
-        dereplicate(query, ref, args_threads, args_offset, args_cigar, options)
+        dereplicate(query, ref, args_threads, args_offset, args_cigar, options, args_ident, args_match)
         sum1, c1 = get_size_count(query)
         print_log('[DereCo] Dereplicated {4}: {0:,} -> {1:,} (bps) / {2:,} -> {3:,} (count)'.format(sum_query, sum1, count_query, c1, query), options['log'])
 
@@ -745,13 +745,15 @@ elif option in ('devour', 'devo'):
     parser = argparse.ArgumentParser(prog='dereco calculate')
     parser.add_argument('-i', '--input', help='Path to the prep output folder.')
     parser.add_argument('-f', '--offset', default=0, type=int, help='Offset for the match length')
+    parser.add_argument('-d', '--ident', default=0.99, type=float, help='Similarity threshold')
+    parser.add_argument('-m', '--match', default=0.97, type=float, help='Minimum mathced length')
     parser.add_argument('-c', '--cigar', action='store_true', help='Use more accurate mode of minimap2, but slower.')
     parser.add_argument('-t', '--threads', type=int, default=2, help='Number of threads')
     if len(sys.argv[:]) == 2:
         parser.print_help()
     else:
         args = parser.parse_args(sys.argv[2:])
-        devour(args.input, args.threads, args.offset, args.cigar)
+        devour(args.input, args.threads, args.offset, args.cigar, args.ident, args.match)
 elif option == 'update':
     print('UPDATE a working directory for new contigs in the target path')
     parser = argparse.ArgumentParser(prog='dereco update')
