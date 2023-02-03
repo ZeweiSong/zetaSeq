@@ -20,11 +20,7 @@ import argparse
 import sys
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-a', '--alignment', \
-                    type=argparse.FileType('r'), \
-                    nargs='+', \
-                    default=sys.stdin, \
-                    help='Specify a chain of alignment file(s).')
+parser.add_argument('-a', '--alignment', help='Specify a chain of alignment file(s).')
 parser.add_argument('-t', '--taxonomy', help='Taxonomy file of the references.')
 parser.add_argument('-o', '--output', help='Output profile in tab delimited-format.')
 parser.add_argument('-l', '--level', help='The level to resolve the profile.')
@@ -36,7 +32,7 @@ tax_file    = args.taxonomy
 out_file    = args.output
 level       = args.level
 sample_name = args.name
-permute_n   =args.permutation
+permute_n   = args.permutation
 
 print('Bayesian Inference Of Multi-Alignments on genome SetS (BIOMASS)')
 print('<= Solving multi-hit using Bayesian inference =>')
@@ -45,35 +41,24 @@ print('=> Taxonomy: {0}'.format(tax_file))
 print('=> Reduce at: {0}'.format(level))
 print('=> Output to: {0}'.format(out_file))
 print('')
-# Read in alignment(s) into qt dictionar(ies)
-sample_dict = []
-for item in aln_file:
-    print('Reading: {0}'.format(item))
-    sample_dict.append(alignment.qtdict(item, tax_file, threshold=level))
 
-if len(sample_dict) > 1:
-    print('Combine all alignments.')
-else:
-    pass
-qtd_combined = alignment.qtdict_combine(sample_dict)
-print('')
-print('A summary of the final query-target dictionary:')
-alignment.qtdict_report(qtd_combined)
+# Build the Q-T graph
+target_dict = alignment.load_blast6(aln_file, alignment.load_taxonomy(tax_file))
+target_dict_nr = alignment.remove_redundant_target(target_dict, threshold=level)
 
-# Convert dictionary into qt graph
-print('')
-print('Convert dictionary into QT graph.')
-print('Inference alignment probabilities of all queries.')
-qtg = alignment.qtgraph(qtd_combined)
+qtGraph = alignment.build_qtgraph(target_dict_nr)
+qtGraph = alignment.assign_uniqueness(qtGraph)
+qtGraph = alignment.update_query_probability(qtGraph)
 
-# Calculate uniqueness and solve qt graph into profile
-print('')
-print('Solve the profile.')
-profile = alignment.count_profile(qtg)
+# Export final profile
+sample_profile = alignment.count_profile(qtGraph)
+profile = []
+for key, value in sample_profile.items():
+    label = ';'.join(key)
+    profile.append((label, value))
+profile.sort(key = lambda x:x[1], reverse=True)
 
-# Write the profile into file
-print('Write profile into file: {0}'.format(out_file))
 with open(out_file, 'w') as f:
-    f.write('BUG\t{0}\n'.format(sample_name))
-    for key, value in profile.items():
-        f.write('{0}\t{1}\n'.format(';'.join(key), value))
+    f.write('{0}\t{1}\n'.format('BUG', sample_name))
+    for item in profile:
+        f.write('{0}\t{1}\n'.format(item[0], item[1]))

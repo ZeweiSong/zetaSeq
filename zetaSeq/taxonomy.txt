@@ -1,0 +1,3 @@
+GCA_000405245.1	d__Archaea;p__Aenigmatarchaeota;c__Aenigmatarchaeia;o__Aenigmatarchaeales;f__Aenigmatarchaeaceae;g__Aenigmatarchaeum;s__Aenigmatarchaeum subterraneum
+GCA_002789635.1	d__Archaea;p__Aenigmatarchaeota;c__Aenigmatarchaeia;o__CG10238-14;f__CG10238-14;g__CG10238-14;s__CG10238-14 sp002789635
+GCA_001784635.1	d__Archaea;p__Aenigmatarchaeota;c__Aenigmatarchaeia;o__CG10238-14;f__CG10238-14;g__RBG-16-49-10;s__RBG-16-49-10 sp001784635

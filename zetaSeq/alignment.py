@@ -179,28 +179,30 @@ def count_profile(qtg):
     return profile
 
 
-#%% Test
-align_file = 'alignment.txt'
-taxon_file = 'taxonomy.txt'
+#%% This is a test
+if __name__ == '__main__':
 
-target_dict = load_blast6(align_file, taxon_file)
-#print(target_dict)
-target_dict_nr = remove_redundant_target(target_dict, threshold='species')
-#print(target_dict_nr)
-
-qtGraph = build_qtgraph(target_dict_nr)
-#print(qtGraph.nodes())
-#%%
-qtGraph = assign_uniqueness(qtGraph)
-# for item in qtGraph.nodes():
-#     print(item, qtGraph.nodes[item])
-#%%
-qtGraph = update_query_probability(qtGraph)
-for item in qtGraph.graph['tnames']:
-    print(item, qtGraph.nodes[item])
-for item in qtGraph.graph['qnames']:
-    print(item, qtGraph.nodes[item])
-#%%
-sample_profile = count_profile(qtGraph)
-for key, value in sample_profile.items():
-    print(key, value)
+    align_file = 'alignment.txt'
+    taxon_file = 'taxonomy.txt'
+    
+    target_dict = load_blast6(align_file, load_taxonomy(taxon_file))
+    #print(target_dict)
+    target_dict_nr = remove_redundant_target(target_dict, threshold='species')
+    #print(target_dict_nr)
+    
+    qtGraph = build_qtgraph(target_dict_nr)
+    #print(qtGraph.nodes())
+    #
+    qtGraph = assign_uniqueness(qtGraph)
+    # for item in qtGraph.nodes():
+    #     print(item, qtGraph.nodes[item])
+    #
+    qtGraph = update_query_probability(qtGraph)
+    for item in qtGraph.graph['tnames']:
+        print(item, qtGraph.nodes[item])
+    for item in qtGraph.graph['qnames']:
+        print(item, qtGraph.nodes[item])
+    #
+    sample_profile = count_profile(qtGraph)
+    for key, value in sample_profile.items():
+        print(key, value)
