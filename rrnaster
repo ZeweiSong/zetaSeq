@@ -196,6 +196,15 @@ for index, item in enumerate(seeds):
             str(item['start']) + ';' + str(item['end']) + ';' + item['strand']
     sequences[item['query']].append((label, seq))
 
+# Write all seed sequences to file
+content = []
+for key, value in sequences.items():
+    for item in value:
+        content.append(item)
+sequences = seqIO.write_seqs(content, args.sequences, fastx='a', gz=False)
+print('')
+print('Seed sequences wrote to: {0}'.format(args.sequences))
+
 # MSA and concensus for each query
 print('')
 content = []
