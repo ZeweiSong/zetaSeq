@@ -201,7 +201,7 @@ content = []
 for key, value in sequences.items():
     for item in value:
         content.append(item)
-sequences = seqIO.write_seqs(content, args.sequences, fastx='a', gz=False)
+count = seqIO.write_seqs(content, args.sequences, fastx='a', gz=False)
 print('')
 print('Seed sequences wrote to: {0}'.format(args.sequences))
 
